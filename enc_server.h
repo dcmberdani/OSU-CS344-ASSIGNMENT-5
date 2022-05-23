@@ -1,5 +1,5 @@
-#ifndef ENC_CLIENT
-#define ENC_CLIENT
+#ifndef ENC_SERVER
+#define ENC_SERVER
 
 // Just for Testing
 void testPrint();
