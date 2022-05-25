@@ -1,7 +1,7 @@
 //Outline taken directly from lecture
 #define IPADDR "127.0.0.1" // Localhost 
 #define BUFSIZE 1024
-#define PORT 56124
+//#define PORT 56124
 
 #include <stdio.h>
 
@@ -16,17 +16,29 @@
 //String stuff
 #include <string.h>
 
+#include <stdlib.h> //atoi()
+
+#include "enc_server.h"
+
 
 void testprint() {
 	printf("Nothing has crashed and burned yet.\n");
 }
 
-int main() {
+int main(int argc, char **argv) {
+	//cmd line args
+	if (argc != 2){
+		printf("ERROR: Incorrect number of parameters\n");
+		return -1;
+	}
+	int PORT = atoi(argv[1]); //Grab port # from cmdline
+	printf("Starting server on port: %d\n", PORT);
+	
 	int server_fd, new_socket, valread;
 	struct sockaddr_in address;
 	int opt = 1;
 	int addrlen = sizeof(address);
-	char *hello = "ENCSERVER: Hello[Server]";
+	char *hello = "ENCSERVER: Hello[Server]\n";
 	char buffer[BUFSIZE] = {0};
 
 	//From exploration "Communication VIA Sockets"
@@ -50,13 +62,13 @@ int main() {
 
 	//Bind socket to given port
 	if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
-		printf("ENCSERVER: bind failed");
+		printf("ENCSERVER: bind failed\n");
 		return -1;
 	}
 
 	//Listen out for connections; We need 5 at most
 	if (listen(server_fd, 5) < 0) {
-		printf("ENCSERVER: listen failed");
+		printf("ENCSERVER: listen failed\n");
 		return -1;
 	}
 
@@ -79,6 +91,9 @@ int main() {
 		//EXPERIMENTAL; close server if message "CLOSE" is sent
 		if (strcmp(buffer, "CLOSE") == 0)
 			break;
+
+		//AFTER EVERYTHING, CLEAR BUFFER
+		memset(buffer, '\0', sizeof(buffer));
 
 	}
 	
