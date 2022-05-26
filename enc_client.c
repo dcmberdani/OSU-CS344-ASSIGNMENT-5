@@ -96,6 +96,22 @@ int main(int argc, char **argv) {
 	valread = recv(sock, buffer, BUFSIZE, 0); //0 specifies no flags
 	printf("ENCCLIENT: Message received: %s\n", buffer);
 
+
+
+
+
+
+
+
+
+	//TEST: Time to decrypt
+	char *decInput = malloc(sizeof(char) * BUFSIZE);
+	memset(decInput, '\0', sizeof(decInput));
+
+	sprintf(decInput, "%s|%s", buffer, key);
+	//printf("DECINPUT: %s", decInput);
+	char *decOut = decryptText(decInput);
+	printf("DECOUT (SHOULD BE PLAINTEXT): %s\n", decOut);
 	
 
 	
@@ -131,3 +147,55 @@ int getStringFromFile(char *filePath, char *outputStr) {
 
 }
 
+
+
+//This actually does the encryption
+char* decryptText(char *input) {
+
+	char *token;
+	char ciphertext[BUFSIZE] = {0};
+	char key[BUFSIZE] = {0};
+	char *plaintext = malloc(sizeof(char) * BUFSIZE);
+	memset(ciphertext, '\0', BUFSIZE); //Make sure the output buffer for ciphertext is clear
+	int keyInt, ptInt, ctInt;
+
+	strcpy(ciphertext, strtok_r(input, "|", &input));
+	strcpy(key, strtok_r(input, "|", &input));
+	printf("\nCT: %s\n\tK: %s\n", ciphertext, key);
+
+	//DECRYPTION OPERATION
+	//	Same but in reverse, essentially
+	//SPECIAL CASES: the ' ' or space character
+	//	When read in from outside, it's set to be 
+	//	When any char is set to 26 + 'A', it becomes a space (ASCII 32)
+	for (int i = 0; i < strlen(ciphertext); i++) {
+		//Set spaces to be 'A + 27'
+		if (ciphertext[i] == ' ') 
+			ciphertext[i] = ('A' + 26);
+		
+		if (key[i] == ' ') 
+			key[i] = ('A' + 26);
+		
+		//printf("CHAR: %c\n", plaintext[i]);
+
+		ctInt = ciphertext[i] - 'A';
+		keyInt = key[i] - 'A';
+
+		//This is the only difference; Since we now subtract, just add 26 if the num is negative
+		ptInt = (ctInt - keyInt); 
+		if (ptInt < 0) ptInt += 27; //add 27 since we have 27 valid chars
+		ptInt += 'A';
+
+		//Now convert back to ' ' 
+		if (ptInt == (26 + 'A'))
+		//if (ptInt == (27 + 'A'))
+			ptInt = 32;
+		plaintext[i] = ptInt;
+
+	}
+
+	int test = (-5 % 26);
+	printf("Just for a test: %d\n", test);
+
+	return plaintext;
+}

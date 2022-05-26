@@ -6,4 +6,9 @@
 int getStringFromFile(char *filePath, char *outputStr);
 //int getStringFromFile(char *fileName, char outputStr);
 
+
+
+//JUST FOR TESTING
+char* decryptText(char *input);
+
 #endif
