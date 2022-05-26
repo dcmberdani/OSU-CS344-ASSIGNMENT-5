@@ -20,10 +20,6 @@
 
 #include "enc_client.h"
 
-void testprint() {
-	printf("Nothing has crashed and burned yet.\n");
-}
-
 int main(int argc, char **argv) {
 	//Before anything, check if the correct number of parameters are used
 	if (argc != 4){
@@ -38,8 +34,6 @@ int main(int argc, char **argv) {
 	char *plaintext = malloc(sizeof(char) * BUFSIZE);
 	char *key = malloc(sizeof(char) * BUFSIZE);
 
-	printf("ENCCLIENT; PLAINTEXT FILE: %s\n\tKEY FILE: %s\n\tPORT: %d\n", plaintext_file, key_file, PORT);
-
 	//Now, perform alternate checks
 	//If either file is invalid, then exit the program
 	//	Error messages printed in function
@@ -48,7 +42,6 @@ int main(int argc, char **argv) {
 
 	if (getStringFromFile(key_file, key) == 0) 
 		return -1;
-	
 
 	//If the key is shorter than the password, also exit
 	if (strlen(plaintext) > strlen(key)) {
@@ -57,14 +50,13 @@ int main(int argc, char **argv) {
 	}
 
 
-	printf("ENCCLIENT; PLAINTEXT: %s\n\tKEY: %s\n", plaintext, key);
+
+
+
 
 	//With preliminary stuff done, now the connection to the server can be done
-
-
 	int sock = 0, valread;
 	struct sockaddr_in serv_addr;
-	//char *hello = "ENCCLIENT: Hello[Client]";
 	char msg[BUFSIZE] = {0};
 	char buffer[BUFSIZE] = {0};
 
@@ -91,16 +83,21 @@ int main(int argc, char **argv) {
 	}
 
 	//Request Encryption; 
-	//For now, just do a test print
+	//We'll send everything to the server all concatenated at once into the buffer
+	//	I think is is good bc it puts the onus locally instead of 50 write calls
 	scanf("%s", msg);
-	//send(sock, hello, strlen(hello), 0);
-	send(sock, msg, strlen(msg), 0);
+	sprintf(buffer, "%s|%s", plaintext, key);
+	send(sock, buffer, strlen(buffer), 0);
 	printf("ENCCLIENT: Message sent\n");
-	//valread = recv(sock, buffer, BUFSIZE);
+
+
+	//Before reading back from server, clear buffer
+	memset(buffer, '\0', sizeof(buffer));
 	valread = recv(sock, buffer, BUFSIZE, 0); //0 specifies no flags
 	printf("ENCCLIENT: Message received: %s\n", buffer);
 
-	//testprint();
+	
+
 	
 	free(plaintext);
 	free(key);

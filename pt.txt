@@ -1,1 +1,1 @@
-This is my plaintext.
+This is my plaintext. CLOSE

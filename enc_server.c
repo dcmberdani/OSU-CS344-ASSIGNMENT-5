@@ -21,9 +21,6 @@
 #include "enc_server.h"
 
 
-void testprint() {
-	printf("Nothing has crashed and burned yet.\n");
-}
 
 int main(int argc, char **argv) {
 	//cmd line args
@@ -89,7 +86,7 @@ int main(int argc, char **argv) {
 		printf("ENCSERVER: Message sent\n");
 
 		//EXPERIMENTAL; close server if message "CLOSE" is sent
-		if (strcmp(buffer, "CLOSE") == 0)
+		if (strstr(buffer, "CLOSE") != NULL)
 			break;
 
 		//AFTER EVERYTHING, CLEAR BUFFER
