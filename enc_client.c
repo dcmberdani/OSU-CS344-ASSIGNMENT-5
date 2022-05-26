@@ -49,6 +49,17 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 
+	//Now, check if the characters in the strings are actually valid
+	if (checkValidInput(plaintext) == 0) {
+		printf("ERROR: Invalid characters found in the plaintext file.\n");
+		return -1;
+	}
+
+	if (checkValidInput(key) == 0) {
+		printf("ERROR: Invalid characters found in the key file.\n");
+		return -1;
+	}
+
 
 
 
@@ -147,6 +158,15 @@ int getStringFromFile(char *filePath, char *outputStr) {
 
 }
 
+//Returns 1 if input is valid, 0 if it isn't
+int checkValidInput(char *input) {
+	//Run through the string; If anything is NOT a capital letter or ' ', return 0
+	for (int i = 0; i < strlen(input); i++) 
+		if ( (input[i] < 'A' || input[i] > 'Z') && input[i] != ' ')
+			return 0;
+
+	return 1;
+}
 
 
 //This actually does the encryption

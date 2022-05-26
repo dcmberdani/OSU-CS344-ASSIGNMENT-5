@@ -7,6 +7,8 @@ int getStringFromFile(char *filePath, char *outputStr);
 //int getStringFromFile(char *fileName, char outputStr);
 
 
+//Checks if the inputted plaintext/key have any invalid chars or not
+int checkValidInput(char *input);
 
 //JUST FOR TESTING
 char* decryptText(char *input);
