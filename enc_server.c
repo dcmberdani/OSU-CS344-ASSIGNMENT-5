@@ -46,13 +46,13 @@ int main(int argc, char **argv) {
 
 	//Make a socket for the server itself for read/write
 	if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-		printf("ENCSERVER: Error: Socket creation error\n");
+		perror("ENCSERVER: Error: Socket creation error\n");
 		return -1;
 	}
 
 	//Attach the server socket to the given port
 	if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
-		printf("ENCSERVER: setsocketopt error\n");
+		perror("ENCSERVER: setsocketopt error\n");
 		return -1;
 	}
 	
@@ -62,13 +62,13 @@ int main(int argc, char **argv) {
 
 	//Bind socket to given port
 	if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
-		printf("ENCSERVER: bind failed\n");
+		perror("ENCSERVER: bind failed\n");
 		return -1;
 	}
 
 	//Listen out for connections; We need 5 at most
 	if (listen(server_fd, 5) < 0) {
-		printf("ENCSERVER: listen failed\n");
+		perror("ENCSERVER: listen failed\n");
 		return -1;
 	}
 
@@ -76,8 +76,9 @@ int main(int argc, char **argv) {
 	while (1) {
 		//if ((new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&sizeof(address))) < 0) {
 		if ((new_socket = accept(server_fd, (struct sockaddr*)&address, &sizeOfClientIP)) < 0) {
-			printf("ENCSERVER: accepting client failed");
-			return -1;
+			perror("ENCSERVER: accepting client failed");
+			//return -1;
+			continue;
 		}
 	
 

@@ -22,9 +22,15 @@
 
 int main(int argc, char **argv) {
 	//Before anything, check if the correct number of parameters are used
+	//	NOTE: This uses fprintf to stderr instead of perror
+	//	This is because no actual error is found; So, 'errno' prints success
+	//	Instead, we have a programmer-defined error state and thus want a custom error message 
 	if (argc != 4){
-		printf("ERROR: Incorrect number of parameters\n");
-		return -1;
+		//perror("ERROR: Incorrect number of parameters\n");
+		fprintf(stderr, "ERROR: Incorrect number of parameters\n");
+		//perror("ERROR: Incorrect number of parameters");
+		//return -1;
+		exit(1);
 	}
 
 	//Then, assign vars to the inputted params
@@ -37,27 +43,40 @@ int main(int argc, char **argv) {
 	//Now, perform alternate checks
 	//If either file is invalid, then exit the program
 	//	Error messages printed in function
-	if (getStringFromFile(plaintext_file, plaintext) == 0) 
-		return -1;
+	if (getStringFromFile(plaintext_file, plaintext) == 0){
+		perror("ERROR: File path for the plaintext is invalid");
+		exit(1);
+		//return -1;
+	}
 
-	if (getStringFromFile(key_file, key) == 0) 
-		return -1;
+	if (getStringFromFile(key_file, key) == 0) {
+		perror("ERROR: File path for the key is invalid");
+		exit(1);
+		//return -1;
+	}
 
 	//If the key is shorter than the password, also exit
 	if (strlen(plaintext) > strlen(key)) {
-		printf("ERROR: key in '%s' is too short \n", key_file);
-		return -1;
+		//printf("ERROR: key in '%s' is too short \n", key_file);
+		//perror("ERROR: Key is too short");
+		fprintf(stderr, "ERROR: Key is too short\n");
+		exit(1);
+		//return -1;
 	}
 
 	//Now, check if the characters in the strings are actually valid
 	if (checkValidInput(plaintext) == 0) {
-		printf("ERROR: Invalid characters found in the plaintext file.\n");
-		return -1;
+		//perror("ERROR: Invalid characters found in the plaintext file");
+		fprintf(stderr, "ERROR: Invalid characters found in the plaintext file\n");
+		exit(1);
+		//return -1;
 	}
 
 	if (checkValidInput(key) == 0) {
-		printf("ERROR: Invalid characters found in the key file.\n");
-		return -1;
+		//perror("ERROR: Invalid characters found in the key file");
+		fprintf(stderr, "ERROR: Invalid characters found in the key file\n");
+		exit(1);
+		//return -1;
 	}
 
 
@@ -73,8 +92,9 @@ int main(int argc, char **argv) {
 
 	//Make a socket
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		printf("ENCCLIENT: Error: Socket creation error\n");
-		return -1;
+		perror("ENCCLIENT: Error: Socket creation error");
+		exit(1);
+		//return -1;
 	}
 
 	serv_addr.sin_family = AF_INET;
@@ -83,14 +103,16 @@ int main(int argc, char **argv) {
 	//Convert IP address to usable binary
 	//if (inet_pton(AF_INET, "localhost", &serv_addr.sin_addr) <= 0) {
 	if (inet_pton(AF_INET, IPADDR, &serv_addr.sin_addr) <= 0) {
-		printf("ENCCLIENT: Error: Invalid address, address not supported\n");
-		return -1;
+		perror("ENCCLIENT: Error: Invalid address, address not supported");
+		exit(1);
+		//return -1;
 	}
 
 	//Actually connect to the server
 	if (connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
-		printf("ENCCLIENT: Connection Failed\n");
-		return -1;
+		perror("ENCCLIENT: Connection Failed");
+		exit(1);
+		//return -1;
 	}
 
 	//Request Encryption; 
@@ -151,7 +173,7 @@ int getStringFromFile(char *filePath, char *outputStr) {
 		outputStr[strlen(outputStr) - 1] = '\0'; //Removes newline; MAYBE BUGGED WITH DIF INPUT?
 		return 1;
 	} else {
-		printf("ERROR: File path '%s' is invalid\n", filePath);
+		//perror("ERROR: File path '%s' is invalid\n", filePath);
 		return 0;
 	}
 
