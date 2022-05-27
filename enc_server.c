@@ -74,6 +74,7 @@ int main(int argc, char **argv) {
 
 	//Create new sockets whenever a server is accepted
 	while (1) {
+		memset(buffer, '\0', sizeof(buffer));
 		//if ((new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&sizeof(address))) < 0) {
 		if ((new_socket = accept(server_fd, (struct sockaddr*)&address, &sizeOfClientIP)) < 0) {
 			perror("ENCSERVER: accepting client failed");
@@ -82,11 +83,32 @@ int main(int argc, char **argv) {
 		}
 	
 
+	
 		//First, receive a message
 		valread = recv(new_socket, buffer, BUFSIZE, 0);
 		printf("ENCSERVER: Message Received: %s\n", buffer);
 
+		//Now, verify the connection if the message is appropriate
+		if (strcmp(buffer, "ENCCLIENT") == 0){
+			printf("TEMP MESSAGE: YOU ARE VERIFIED\n");
+			memset(buffer, '\0', sizeof(buffer));
+			strcpy(buffer, "VERIFIED");
+			send(new_socket, buffer, strlen(buffer), 0);
+		} else {
+
+			printf("TEMP MESSAGE: YOU ARE NOT VERIFIED\n");
+			memset(buffer, '\0', sizeof(buffer));
+			strcpy(buffer, "NOT VERIFIED");
+			send(new_socket, buffer, strlen(buffer), 0);
+			//You must also terminate the connection here as well;
+			shutdown(new_socket, SHUT_RDWR);
+			continue;
+		}
+		
+
 		//Perform decryption with the newly received key and plaintext
+		memset(buffer, '\0', sizeof(buffer));
+		valread = recv(new_socket, buffer, BUFSIZE, 0);
 		input = malloc(sizeof(char) * BUFSIZE);
 		strcpy(input, buffer);
 		ciphertext = encryptText(input);
@@ -105,8 +127,6 @@ int main(int argc, char **argv) {
 		//EXPERIMENTAL; close server if message "CLOSE" is sent
 		if (strstr(buffer, "CLOSE") != NULL)
 			break;
-
-		memset(buffer, '\0', sizeof(buffer));
 	}
 	
 	//Find some way to close the infinite loop? Maybe if the buffer is 0 it'll close

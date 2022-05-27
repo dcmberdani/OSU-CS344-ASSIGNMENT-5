@@ -87,7 +87,8 @@ int main(int argc, char **argv) {
 	//With preliminary stuff done, now the connection to the server can be done
 	int sock = 0, valread;
 	struct sockaddr_in serv_addr;
-	char msg[BUFSIZE] = {0};
+	//char msg[BUFSIZE] = {0};
+	char idMsg[BUFSIZE] = {0};
 	char buffer[BUFSIZE] = {0};
 
 	//Make a socket
@@ -118,12 +119,32 @@ int main(int argc, char **argv) {
 	//Request Encryption; 
 	//We'll send everything to the server all concatenated at once into the buffer
 	//	I think is is good bc it puts the onus locally instead of 50 write calls
-	scanf("%s", msg);
+	//scanf("%s", msg);
+	strcpy(idMsg, "ENCCLIENT");
+	//strcpy(idMsg, "BADENCCLIENT");
+	send(sock, idMsg, strlen(idMsg), 0);
+	printf("ENCCLIENT: ID STRING sent\n");
+
+	//Before reading back from server, clear buffer
+	memset(buffer, '\0', sizeof(buffer));
+	valread = recv(sock, buffer, BUFSIZE, 0); //0 specifies no flags
+
+	printf("Checking if we are valid to continue: %s\n", buffer);
+
+	if (strcmp(buffer, "NOT VERIFIED") == 0) {
+		fprintf(stderr, "ERROR: Invalid server.\n");
+		exit(1);
+	}
+
+
+	//Now actually send over plaintext
+	memset(buffer, '\0', sizeof(buffer));
 	sprintf(buffer, "%s|%s", plaintext, key);
 	send(sock, buffer, strlen(buffer), 0);
 	printf("ENCCLIENT: Message sent\n");
 
 
+	//Now read in ciphertext
 	//Before reading back from server, clear buffer
 	memset(buffer, '\0', sizeof(buffer));
 	valread = recv(sock, buffer, BUFSIZE, 0); //0 specifies no flags
