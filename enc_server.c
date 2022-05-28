@@ -1,7 +1,8 @@
 //Outline taken directly from lecture
 #define IPADDR "127.0.0.1" // Localhost 
-#define BUFSIZE 1024
-#define S_BUFSIZE 32
+#define BUFSIZE 150000
+//#define BUFSIZE 1024
+#define S_BUFSIZE 256
 //#define PORT 56124
 
 #include <stdio.h>
@@ -155,7 +156,7 @@ int main(int argc, char **argv) {
 			char *end;
 			int packets = (int) strtol(temp, &end, 10);
 			//int packets = itoa(temp);
-			printf("RECEIVED THIS AS PACKET COUNT: %d\n", packets);
+			fprintf(stdout, "ENCSERVER: Received as packet count: %d.\n", packets);
 
 			//Send confirmation message to send text back
 			memset(temp, '\0', S_BUFSIZE);
@@ -182,9 +183,46 @@ int main(int argc, char **argv) {
 			ciphertext = encryptText(input);
 
 			//printf("ENCSERVER: Outputted Ciphetext: %s\n", ciphertext);
+			
+
+
+			//Now, repeat on the server side
+			packets = 0;
+			packets = strlen(ciphertext) / S_BUFSIZE;
+			if (strlen(ciphertext) - (packets * S_BUFSIZE) > 0) packets +=1;
+			fprintf(stdout, "ENCSERVER: Num of packets to send over: %d\n", packets);
+
+			memset(temp, '\0', S_BUFSIZE);
+			sprintf(temp, "%d\n", packets);
+			send(new_socket, temp, S_BUFSIZE, 0);
+			//send(sock, temp, S_BUFSIZE, 0);
+
+
+
+			memset(temp, '\0', S_BUFSIZE);
+			valread = recv(new_socket, temp, S_BUFSIZE, 0); //Wait for the confirmation message from the server
+			if (strcmp (temp, "go") == 0)
+				fprintf(stdout, "ENCSERVER: Confirmation received.\n");
+			
+
+
+			//Finally, incrementally send out the plaintext
+
+			for (int i = 0; i < packets; i++) {
+				memset(temp, '\0', S_BUFSIZE);
+				strncpy(temp, ciphertext, S_BUFSIZE);	
+				memmove(ciphertext, ciphertext+S_BUFSIZE, BUFSIZE - S_BUFSIZE); //Careful with this precision
+				//memmove(input, input+S_BUFSIZE, BUFSIZE); //Careful with this precision
+				send(new_socket, temp, S_BUFSIZE, 0);
+			}
+
+
+
+
+
 
 			//send(new_socket, hello, strlen(hello), 0);
-			send(new_socket, ciphertext, strlen(ciphertext), 0);
+			//send(new_socket, ciphertext, strlen(ciphertext), 0);
 			//printf("ENCSERVER: Message sent\n");
 
 

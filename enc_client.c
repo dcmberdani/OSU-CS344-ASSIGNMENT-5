@@ -1,7 +1,8 @@
 //Outline taken directly from lecture
 #define IPADDR "127.0.0.1" // Localhost 
-#define BUFSIZE 1024
-#define S_BUFSIZE 32
+//#define BUFSIZE 1024
+#define BUFSIZE 150000
+#define S_BUFSIZE 256
 //#define PORT 56124
 
 #include <stdio.h>
@@ -126,19 +127,53 @@ int main(int argc, char **argv) {
 	for (int i = 0; i < packets; i++) {
 		memset(temp, '\0', S_BUFSIZE);
 		strncpy(temp, buffer, S_BUFSIZE);	
-		memmove(buffer, buffer+S_BUFSIZE, BUFSIZE); //Careful with this precision
+		//memmove(buffer, buffer+S_BUFSIZE, BUFSIZE); //Careful with this precision
+		memmove(buffer, buffer+S_BUFSIZE, BUFSIZE - S_BUFSIZE); //Careful with this precision
 		send(sock, temp, S_BUFSIZE, 0);
 	}
 
 
 
-	//send(sock, buffer, BUFSIZE, 0);
+		
+	//First, receive the number of packets
+	memset(temp, '\0', S_BUFSIZE);
+	valread = recv(sock, temp, S_BUFSIZE, 0);
+	char *end;
+	packets = (int) strtol(temp, &end, 10);
+	//int packets = itoa(temp);
+	printf("RECEIVED THIS AS PACKET COUNT: %d\n", packets);
+
+	//Send confirmation message to send text back
+	memset(temp, '\0', S_BUFSIZE);
+	strcpy(temp, "go");
+	send(sock, temp, S_BUFSIZE, 0);
+			
+
+
+
+	//Finally, incrementally read in the ciphertext
+	//Now, receive the aforementioned number of packets
+	memset(buffer, '\0', sizeof(buffer));
+	for (int i = 0; i < packets; i++) {
+		memset(temp, '\0', S_BUFSIZE);
+		valread = recv(sock, temp, S_BUFSIZE, 0);
+		//printf("ENCSERVER: JUST READ: %s\n", temp);
+		strcat(buffer, temp);
+	}
+
+
+
 
 
 	//Now read in ciphertext
+	/*
 	memset(buffer, '\0', BUFSIZE);
 	valread = recv(sock, buffer, BUFSIZE, 0); //0 specifies no flags
 	//printf("ENCCLIENT: Message received: %s\n", buffer);
+	*/
+
+
+
 	printf("%s\n", buffer); //Prints out ciphertext
 
 
