@@ -1,5 +1,5 @@
-#ifndef ENC_CLIENT
-#define ENC_CLIENT
+#ifndef DEC_CLIENT
+#define DEC_CLIENT
 
 
 //Grabs a string from a file; Returns an int depending on success

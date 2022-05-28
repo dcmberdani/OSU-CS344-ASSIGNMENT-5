@@ -18,7 +18,7 @@
 
 #include <stdlib.h> //atoi()
 
-#include "enc_client.h"
+#include "dec_client.h"
 
 int main(int argc, char **argv) {
 	//Before anything, check if the correct number of parameters are used
@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
 	//	Instead, we have a programmer-defined error state and thus want a custom error message 
 	if (argc != 4){
 		//perror("ERROR: Incorrect number of parameters\n");
-		fprintf(stderr, "ENCCLIENT: ERROR: Incorrect number of parameters\n");
+		fprintf(stderr, "DECCLIENT: ERROR: Incorrect number of parameters\n");
 		//perror("ERROR: Incorrect number of parameters");
 		//return -1;
 		exit(1);
@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
 		
 	//Make a socket
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		perror("ENCCLIENT: ERROR: Socket creation error");
+		perror("DECCLIENT: ERROR: Socket creation error");
 		exit(1);
 		//return -1;
 	}
@@ -67,14 +67,14 @@ int main(int argc, char **argv) {
 	//Convert IP address to usable binary
 	//if (inet_pton(AF_INET, "localhost", &serv_addr.sin_addr) <= 0) {
 	if (inet_pton(AF_INET, IPADDR, &serv_addr.sin_addr) <= 0) {
-		perror("ENCCLIENT: ERROR: Invalid address, address not supported");
+		perror("DECCLIENT: ERROR: Invalid address, address not supported");
 		exit(1);
 		//return -1;
 	}
 
 	//Actually connect to the server
 	if (connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
-		perror("ENCCLIENT: ERROR: Connection Failed");
+		perror("DECCLIENT: ERROR: Connection Failed");
 		exit(1);
 		//return -1;
 	}
@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
 
 	//Check if valid server, then perform communication
 	if (checkValidServer(sock, valread, buffer) == 0) {
-		fprintf(stderr, "ENCCLIENT: ERROR: Invalid server.\n");
+		fprintf(stderr, "DECCLIENT: ERROR: Invalid server.\n");
 		exit(2);
 	}
 
@@ -128,29 +128,29 @@ int initialErrorCheck(char *plaintext, char *key, char **argv) {
 	//If either file is invalid, then exit the program
 	//	Error messages printed in function
 	if (getStringFromFile(plaintext_file, plaintext) == 0){
-		perror("ENCCLIENT: ERROR: File path for the plaintext is invalid");
+		perror("DECCLIENT: ERROR: File path for the plaintext is invalid");
 		return 0;
 	}
 
 	if (getStringFromFile(key_file, key) == 0) {
-		perror("ENCCLIENT: ERROR: File path for the key is invalid");
+		perror("DECCLIENT: ERROR: File path for the key is invalid");
 		return 0;
 	}
 
 	//If the key is shorter than the password, also exit
 	if (strlen(plaintext) > strlen(key)) {
-		fprintf(stderr, "ENCCLIENT: ERROR: Key is too short\n");
+		fprintf(stderr, "DECCLIENT: ERROR: Key is too short\n");
 		return 0;
 	}
 
 	//Now, check if the characters in the strings are actually valid
 	if (checkValidInput(plaintext) == 0) {
-		fprintf(stderr, "ENCCLIENT: ERROR: Invalid characters found in the plaintext file\n");
+		fprintf(stderr, "DECCLIENT: ERROR: Invalid characters found in the plaintext file\n");
 		return 0;
 	}
 
 	if (checkValidInput(key) == 0) {
-		fprintf(stderr, "ENCCLIENT: ERROR: Invalid characters found in the key file\n");
+		fprintf(stderr, "DECCLIENT: ERROR: Invalid characters found in the key file\n");
 		return 0;
 	}
 
@@ -165,7 +165,7 @@ int checkValidServer(int sock, int valread, char *buffer) {
 	//	I think is is good bc it puts the onus locally instead of 50 write calls
 	//scanf("%s", msg);
 	memset(buffer, '\0', BUFSIZE);
-	strcpy(buffer, "ENCCLIENT");
+	strcpy(buffer, "DECCLIENT");
 	//strcpy(buffer, "BADENCCLIENT");
 	send(sock, buffer, BUFSIZE, 0);
 	//printf("ENCCLIENT: ID STRING sent\n");
