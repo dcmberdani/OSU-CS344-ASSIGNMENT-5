@@ -1,6 +1,7 @@
 //Outline taken directly from lecture
 #define IPADDR "127.0.0.1" // Localhost 
 #define BUFSIZE 1024
+#define S_BUFSIZE 32
 //#define PORT 56124
 
 #include <stdio.h>
@@ -137,36 +138,7 @@ int main(int argc, char **argv) {
 		}
 		//Child fork case; Here is where connection is handled
 		if (pid == 0) {
-			
-			/*	
-			//First, receive a message
-			valread = recv(new_socket, buffer, BUFSIZE, 0);
-			//printf("ENCSERVER: Message Received: %s\n", buffer);
-
-			//Now, verify the connection if the message is appropriate
-			if (strcmp(buffer, "ENCCLIENT") == 0){
-				//printf("ENCSERVER: YOU ARE VERIFIED\n");
-				memset(buffer, '\0', BUFSIZE);
-				strcpy(buffer, "VERIFIED");
-				send(new_socket, buffer, strlen(buffer), 0);
-			} else {
-
-				//printf("ENCSERVER: YOU ARE NOT VERIFIED\n");
-				memset(buffer, '\0', sizeof(buffer));
-				strcpy(buffer, "NOT VERIFIED");
-				send(new_socket, buffer, strlen(buffer), 0);
-
-				//You must also terminate the connection here as well;
-				//Increment semaphore now that it's closed
-				shutdown(new_socket, SHUT_RDWR);
-				sem_post(semOpenClients);
-				continue;
-			}
-			*/	
-			
-
 			//If verification fails, shut down the socket
-			
 			if (verifyClient(new_socket, valread) == 0) {
 				shutdown(new_socket, SHUT_RDWR);
 				sem_post(semOpenClients);
@@ -174,11 +146,37 @@ int main(int argc, char **argv) {
 			}
 			
 		
+
+
+			
+			//First, receive the number of packets
+			char temp[S_BUFSIZE] = {0};
+			valread = recv(new_socket, temp, S_BUFSIZE, 0);
+			char *end;
+			int packets = (int) strtol(temp, &end, 10);
+			//int packets = itoa(temp);
+			printf("RECEIVED THIS AS PACKET COUNT: %d\n", packets);
+
+			//Send confirmation message to send text back
+			memset(temp, '\0', S_BUFSIZE);
+			strcpy(temp, "go");
+			send(new_socket, temp, S_BUFSIZE, 0);
 			
 
-			//Perform decryption with the newly received key and plaintext
+			//Now, receive the aforementioned number of packets
 			memset(buffer, '\0', sizeof(buffer));
-			valread = recv(new_socket, buffer, BUFSIZE, 0);
+			for (int i = 0; i < packets; i++) {
+				memset(temp, '\0', S_BUFSIZE);
+				valread = recv(new_socket, temp, S_BUFSIZE, 0);
+				//printf("ENCSERVER: JUST READ: %s\n", temp);
+				strcat(buffer, temp);
+			}
+
+
+
+			//Perform decryption with the newly received key and plaintext
+			//memset(buffer, '\0', sizeof(buffer));
+			//valread = recv(new_socket, buffer, BUFSIZE, 0);
 			input = malloc(sizeof(char) * BUFSIZE);
 			strcpy(input, buffer);
 			ciphertext = encryptText(input);

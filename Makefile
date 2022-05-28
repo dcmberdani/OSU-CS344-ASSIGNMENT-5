@@ -1,6 +1,7 @@
 CC=gcc --std=gnu99 -g -lpthread
 
-all: enc_client dec_client enc_server dec_server keygen
+#all: enc_client dec_client enc_server dec_server keygen
+all: enc_client enc_server keygen
 
 
 

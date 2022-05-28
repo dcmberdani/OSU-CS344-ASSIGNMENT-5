@@ -1,6 +1,7 @@
 //Outline taken directly from lecture
 #define IPADDR "127.0.0.1" // Localhost 
 #define BUFSIZE 1024
+#define S_BUFSIZE 32
 //#define PORT 56124
 
 #include <stdio.h>
@@ -98,7 +99,40 @@ int main(int argc, char **argv) {
 	//Now actually send over plaintext
 	memset(buffer, '\0', BUFSIZE);
 	sprintf(buffer, "%s|%s", plaintext, key);
-	send(sock, buffer, BUFSIZE, 0);
+
+	/*
+	printf("Num chars sent over the file: %d\n", strlen(buffer));
+	printf("Num packets sent over the file if packet size 50: %d\n", strlen(buffer) / 50 + 1);
+	*/
+
+	//First, send the number of packets
+	int packets = 0;
+	char temp[S_BUFSIZE] = {0};
+	packets = strlen(buffer) / S_BUFSIZE;
+	if (strlen(buffer) - (packets * S_BUFSIZE) > 0) packets +=1;
+	printf("Num of packets to send over: %d\n", packets);
+	//send(sock, buffer, BUFSIZE, 0);
+
+	sprintf(temp, "%d\n", packets);
+	send(sock, temp, S_BUFSIZE, 0);
+
+
+	memset(temp, '\0', S_BUFSIZE);
+	valread = recv(sock, temp, S_BUFSIZE, 0); //Wait for the confirmation message from the server
+	if (strcmp (temp, "go") == 0)
+		printf("Confirmation received.\n");
+	
+
+	for (int i = 0; i < packets; i++) {
+		memset(temp, '\0', S_BUFSIZE);
+		strncpy(temp, buffer, S_BUFSIZE);	
+		memmove(buffer, buffer+S_BUFSIZE, BUFSIZE); //Careful with this precision
+		send(sock, temp, S_BUFSIZE, 0);
+	}
+
+
+
+	//send(sock, buffer, BUFSIZE, 0);
 
 
 	//Now read in ciphertext
