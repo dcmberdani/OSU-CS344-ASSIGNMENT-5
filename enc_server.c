@@ -31,9 +31,11 @@
 
 
 int main(int argc, char **argv) {
+	char idstring[S_BUFSIZE] = "ENCSERVER";
+
 	//cmd line args
 	if (argc != 2){
-		fprintf(stderr, "ENCSERVER: ERROR: Incorrect number of parameters\n");
+		fprintf(stderr, "%s: ERROR: Incorrect number of parameters\n", idstring);
 		return -1;
 	}
 	int port = atoi(argv[1]); //Grab port # from cmdline
@@ -64,13 +66,13 @@ int main(int argc, char **argv) {
 
 	//Make a socket for the server itself for read/write
 	if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-		perror("ENCSERVER: Error: Socket creation error\n");
+		fprintf(stderr, "%s: Error: Socket creation error\n", idstring);
 		return -1;
 	}
 
 	//Attach the server socket to the given port
 	if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
-		perror("ENCSERVER: setsocketopt error\n");
+		fprintf(stderr, "%s: setsocketopt error\n", idstring);
 		return -1;
 	}
 	
@@ -80,13 +82,13 @@ int main(int argc, char **argv) {
 
 	//Bind socket to given port
 	if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
-		perror("ENCSERVER: ERROR: bind failed\n");
+		fprintf(stderr, "%s: ERROR: bind failed\n", idstring);
 		return -1;
 	}
 
 	//Listen out for connections; We need 5 at most
 	if (listen(server_fd, 5) < 0) {
-		perror("ENCSERVER: ERROR: listen failed\n");
+		fprintf(stderr, "%s: ERROR: listen failed\n", idstring);
 		return -1;
 	}
 
@@ -124,7 +126,7 @@ int main(int argc, char **argv) {
 
 		//if ((new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&sizeof(address))) < 0) {
 		if ((new_socket = accept(server_fd, (struct sockaddr*)&address, &sizeOfClientIP)) < 0) {
-			perror("ENCSERVER: ERROR: accepting client failed");
+			fprintf(stderr, "%s: ERROR: accepting client failed\n", idstring);
 			//return -1;
 			continue;
 		}
@@ -134,7 +136,7 @@ int main(int argc, char **argv) {
 		
 		//Error fork case
 		if (pid < 0) {
-			perror("ENCSERVER: ERROR: forking failed");
+			fprintf(stderr, "%s: ERROR: forking failed\n", idstring);
 			exit(1);
 		}
 		//Child fork case; Here is where connection is handled
@@ -156,7 +158,7 @@ int main(int argc, char **argv) {
 			char *end;
 			int packets = (int) strtol(temp, &end, 10);
 			//int packets = itoa(temp);
-			fprintf(stdout, "ENCSERVER: Received as packet count: %d.\n", packets);
+			//fprintf(stdout, "ENCSERVER: Received as packet count: %d.\n", packets);
 
 			//Send confirmation message to send text back
 			memset(temp, '\0', S_BUFSIZE);
@@ -190,7 +192,7 @@ int main(int argc, char **argv) {
 			packets = 0;
 			packets = strlen(ciphertext) / S_BUFSIZE;
 			if (strlen(ciphertext) - (packets * S_BUFSIZE) > 0) packets +=1;
-			fprintf(stdout, "ENCSERVER: Num of packets to send over: %d\n", packets);
+			//fprintf(stdout, "ENCSERVER: Num of packets to send over: %d\n", packets);
 
 			memset(temp, '\0', S_BUFSIZE);
 			sprintf(temp, "%d\n", packets);
@@ -201,8 +203,10 @@ int main(int argc, char **argv) {
 
 			memset(temp, '\0', S_BUFSIZE);
 			valread = recv(new_socket, temp, S_BUFSIZE, 0); //Wait for the confirmation message from the server
-			if (strcmp (temp, "go") == 0)
-				fprintf(stdout, "ENCSERVER: Confirmation received.\n");
+			if (strcmp (temp, "go") != 0) {
+				fprintf(stderr, "%s: ERROR: Transmission failed.\n", idstring);
+				exit(1);
+			}
 			
 
 
