@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "ENCSERVER: ERROR: Incorrect number of parameters\n");
 		return -1;
 	}
-	int PORT = atoi(argv[1]); //Grab port # from cmdline
+	int port = atoi(argv[1]); //Grab port # from cmdline
 	//printf("ENCSERVER: Starting server on port: %d\n", PORT);
 	
 	int server_fd, new_socket, valread;
@@ -47,6 +47,15 @@ int main(int argc, char **argv) {
 	char *ciphertext;
 	char buffer[BUFSIZE] = {0};
 	int status;
+
+
+
+
+
+
+
+
+
 
 	//From exploration "Communication VIA Sockets"
 	socklen_t sizeOfClientIP = sizeof(IPADDR); //All addresses are on localhost
@@ -65,7 +74,7 @@ int main(int argc, char **argv) {
 	
 	address.sin_family = AF_INET;
 	address.sin_addr.s_addr = INADDR_ANY; // bind to any address
-	address.sin_port = htons(PORT); // format the port #
+	address.sin_port = htons(port); // format the port #
 
 	//Bind socket to given port
 	if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
@@ -79,14 +88,24 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 
+
+
+
+
+
+
+
+
 	//int clientCount = 0;
 	//https://stackoverflow.com/questions/8359322/how-to-share-semaphores-between-processes-using-shared-memory
 	sem_t *semOpenClients = sem_open("semOpenClients", O_CREAT, 0644, 5); //Public semaphore of value 5; Don't fork unless one is open
+	//Temp fix as the semaphore seems to not want to actually work w/a default value
 	sem_post(semOpenClients);
 	sem_post(semOpenClients);
 	sem_post(semOpenClients);
 	sem_post(semOpenClients);
 	sem_post(semOpenClients);
+
 	pid_t pid;
 	//Create new sockets whenever a server is accepted
 	while (1) {
@@ -118,6 +137,8 @@ int main(int argc, char **argv) {
 		}
 		//Child fork case; Here is where connection is handled
 		if (pid == 0) {
+			
+			/*	
 			//First, receive a message
 			valread = recv(new_socket, buffer, BUFSIZE, 0);
 			//printf("ENCSERVER: Message Received: %s\n", buffer);
@@ -125,7 +146,7 @@ int main(int argc, char **argv) {
 			//Now, verify the connection if the message is appropriate
 			if (strcmp(buffer, "ENCCLIENT") == 0){
 				//printf("ENCSERVER: YOU ARE VERIFIED\n");
-				memset(buffer, '\0', sizeof(buffer));
+				memset(buffer, '\0', BUFSIZE);
 				strcpy(buffer, "VERIFIED");
 				send(new_socket, buffer, strlen(buffer), 0);
 			} else {
@@ -134,12 +155,25 @@ int main(int argc, char **argv) {
 				memset(buffer, '\0', sizeof(buffer));
 				strcpy(buffer, "NOT VERIFIED");
 				send(new_socket, buffer, strlen(buffer), 0);
+
 				//You must also terminate the connection here as well;
-				shutdown(new_socket, SHUT_RDWR);
 				//Increment semaphore now that it's closed
+				shutdown(new_socket, SHUT_RDWR);
 				sem_post(semOpenClients);
 				continue;
 			}
+			*/	
+			
+
+			//If verification fails, shut down the socket
+			
+			if (verifyClient(new_socket, valread) == 0) {
+				shutdown(new_socket, SHUT_RDWR);
+				sem_post(semOpenClients);
+				continue;
+			}
+			
+		
 			
 
 			//Perform decryption with the newly received key and plaintext
@@ -180,6 +214,41 @@ int main(int argc, char **argv) {
 	//testprint();
 
 	return 0;
+}
+
+//Reads into a small buffer and checks for the correct
+//	If it's good, continue; Returns 1
+//	If not, then don't; Returns 0
+int verifyClient(int new_socket, int valread) {
+	//char buffer[BUFSIZE] = {0};
+	char newbuffer[BUFSIZE] = {0};
+	
+	//First, receive a message
+	valread = recv(new_socket, newbuffer, BUFSIZE, 0);
+	//printf("ENCSERVER: Message Received: %s\n", buffer);
+
+	//Now, verify the connection if the message is appropriate
+	if (strcmp(newbuffer, "ENCCLIENT") == 0){
+		//printf("ENCSERVER: YOU ARE VERIFIED\n");
+		memset(newbuffer, '\0', BUFSIZE);
+		strcpy(newbuffer, "VERIFIED");
+		send(new_socket, newbuffer, BUFSIZE, 0);
+
+		return 1;
+	} else {
+		//printf("ENCSERVER: YOU ARE NOT VERIFIED\n");
+		memset(newbuffer, '\0', BUFSIZE);
+		strcpy(newbuffer, "NOT VERIFIED");
+		send(new_socket, newbuffer, BUFSIZE, 0);
+		//You must also terminate the connection here as well;
+
+		return 0;
+		//Increment semaphore now that it's closed
+		//shutdown(new_socket, SHUT_RDWR);
+		//sem_post(semOpenClients);
+		//continue;
+	}
+		
 }
 
 

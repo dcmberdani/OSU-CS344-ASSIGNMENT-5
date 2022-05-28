@@ -36,61 +36,24 @@ int main(int argc, char **argv) {
 	//Then, assign vars to the inputted params
 	char *plaintext_file = argv[1];
 	char *key_file = argv[2];
-	int PORT = atoi(argv[3]);
+	int port = atoi(argv[3]);
 	char *plaintext = malloc(sizeof(char) * BUFSIZE);
 	char *key = malloc(sizeof(char) * BUFSIZE);
+	//char *plaintext, *key;
+	char *buffer = malloc(sizeof(char) * BUFSIZE);
+	memset(buffer, '\0', BUFSIZE);
 
-	//Now, perform alternate checks
-	//If either file is invalid, then exit the program
-	//	Error messages printed in function
-	if (getStringFromFile(plaintext_file, plaintext) == 0){
-		perror("ENCCLIENT: ERROR: File path for the plaintext is invalid");
+
+	if (initialErrorCheck(plaintext, key, argv) == 0) {
 		exit(1);
-		//return -1;
 	}
-
-	if (getStringFromFile(key_file, key) == 0) {
-		perror("ENCCLIENT: ERROR: File path for the key is invalid");
-		exit(1);
-		//return -1;
-	}
-
-	//If the key is shorter than the password, also exit
-	if (strlen(plaintext) > strlen(key)) {
-		//printf("ERROR: key in '%s' is too short \n", key_file);
-		//perror("ERROR: Key is too short");
-		fprintf(stderr, "ENCCLIENT: ERROR: Key is too short\n");
-		exit(1);
-		//return -1;
-	}
-
-	//Now, check if the characters in the strings are actually valid
-	if (checkValidInput(plaintext) == 0) {
-		//perror("ERROR: Invalid characters found in the plaintext file");
-		fprintf(stderr, "ENCCLIENT: ERROR: Invalid characters found in the plaintext file\n");
-		exit(1);
-		//return -1;
-	}
-
-	if (checkValidInput(key) == 0) {
-		//perror("ERROR: Invalid characters found in the key file");
-		fprintf(stderr, "ENCCLIENT: ERROR: Invalid characters found in the key file\n");
-		exit(1);
-		//return -1;
-	}
-
-
-
-
 
 
 	//With preliminary stuff done, now the connection to the server can be done
 	int sock = 0, valread;
 	struct sockaddr_in serv_addr;
-	char msg[BUFSIZE] = {0}; // JUST FOR TESTING
-	char idMsg[BUFSIZE] = {0};
-	char buffer[BUFSIZE] = {0};
 
+		
 	//Make a socket
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 		perror("ENCCLIENT: ERROR: Socket creation error");
@@ -99,7 +62,7 @@ int main(int argc, char **argv) {
 	}
 
 	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(PORT); //Maybe make port a cmd line arg or in a shared header?
+	serv_addr.sin_port = htons(port); //Maybe make port a cmd line arg or in a shared header?
 
 	//Convert IP address to usable binary
 	//if (inet_pton(AF_INET, "localhost", &serv_addr.sin_addr) <= 0) {
@@ -115,70 +78,111 @@ int main(int argc, char **argv) {
 		exit(1);
 		//return -1;
 	}
+	
+	
 
-	//Request Encryption; 
-	//We'll send everything to the server all concatenated at once into the buffer
-	//	I think is is good bc it puts the onus locally instead of 50 write calls
-	//scanf("%s", msg);
-	strcpy(idMsg, "ENCCLIENT");
-	//strcpy(idMsg, "BADENCCLIENT");
-	send(sock, idMsg, strlen(idMsg), 0);
-	//printf("ENCCLIENT: ID STRING sent\n");
+	//setUpSocket(sock, valread, &serv_addr, port);
 
-	//Before reading back from server, clear buffer
-	memset(buffer, '\0', sizeof(buffer));
-	valread = recv(sock, buffer, BUFSIZE, 0); //0 specifies no flags
 
-	//printf("ENCCLIENT: Checking if we are valid to continue: %s\n", buffer);
 
-	if (strcmp(buffer, "NOT VERIFIED") == 0) {
+	//Check if valid server, then perform communication
+	if (checkValidServer(sock, valread, buffer) == 0) {
 		fprintf(stderr, "ENCCLIENT: ERROR: Invalid server.\n");
-		//exit(1);
 		exit(2);
 	}
 
 
+
+
+
 	//Now actually send over plaintext
-	memset(buffer, '\0', sizeof(buffer));
+	memset(buffer, '\0', BUFSIZE);
 	sprintf(buffer, "%s|%s", plaintext, key);
-	send(sock, buffer, strlen(buffer), 0);
-	//printf("ENCCLIENT: Message sent\n");
+	send(sock, buffer, BUFSIZE, 0);
 
 
 	//Now read in ciphertext
-	//Before reading back from server, clear buffer
-	memset(buffer, '\0', sizeof(buffer));
+	memset(buffer, '\0', BUFSIZE);
 	valread = recv(sock, buffer, BUFSIZE, 0); //0 specifies no flags
 	//printf("ENCCLIENT: Message received: %s\n", buffer);
 	printf("%s\n", buffer); //Prints out ciphertext
 
-	
 
-
-
-
-
-	/*
-
-	//TEST: Time to decrypt
-	char *decInput = malloc(sizeof(char) * BUFSIZE);
-	memset(decInput, '\0', sizeof(decInput));
-
-	sprintf(decInput, "%s|%s", buffer, key);
-	//printf("DECINPUT: %s", decInput);
-	char *decOut = decryptText(decInput);
-	//printf("ENCCLIENT: DECOUT (SHOULD BE PLAINTEXT): %s\n", decOut);
-	free(decInput);
-	
-
-	
+	//Free memory before exiting
 	free(plaintext);
 	free(key);
-	*/
+	free(buffer);
 
 	//Exit 0 upon good execution
 	exit(0);
-	return 0;
+	//return 0;
+}
+
+
+//Returns 1 on success, 0 on fail
+int initialErrorCheck(char *plaintext, char *key, char **argv) {
+	char *plaintext_file = argv[1];
+	char *key_file = argv[2];
+
+	//Now, perform alternate checks
+	//If either file is invalid, then exit the program
+	//	Error messages printed in function
+	if (getStringFromFile(plaintext_file, plaintext) == 0){
+		perror("ENCCLIENT: ERROR: File path for the plaintext is invalid");
+		return 0;
+	}
+
+	if (getStringFromFile(key_file, key) == 0) {
+		perror("ENCCLIENT: ERROR: File path for the key is invalid");
+		return 0;
+	}
+
+	//If the key is shorter than the password, also exit
+	if (strlen(plaintext) > strlen(key)) {
+		fprintf(stderr, "ENCCLIENT: ERROR: Key is too short\n");
+		return 0;
+	}
+
+	//Now, check if the characters in the strings are actually valid
+	if (checkValidInput(plaintext) == 0) {
+		fprintf(stderr, "ENCCLIENT: ERROR: Invalid characters found in the plaintext file\n");
+		return 0;
+	}
+
+	if (checkValidInput(key) == 0) {
+		fprintf(stderr, "ENCCLIENT: ERROR: Invalid characters found in the key file\n");
+		return 0;
+	}
+
+
+	return 1;
+
+}
+
+int checkValidServer(int sock, int valread, char *buffer) {
+	//Request Encryption; 
+	//We'll send everything to the server all concatenated at once into the buffer
+	//	I think is is good bc it puts the onus locally instead of 50 write calls
+	//scanf("%s", msg);
+	memset(buffer, '\0', BUFSIZE);
+	strcpy(buffer, "ENCCLIENT");
+	//strcpy(buffer, "BADENCCLIENT");
+	send(sock, buffer, BUFSIZE, 0);
+	//printf("ENCCLIENT: ID STRING sent\n");
+
+	//Before reading back from server, clear buffer
+	memset(buffer, '\0', BUFSIZE);
+	valread = recv(sock, buffer, BUFSIZE, 0); //0 specifies no flags
+
+	//printf("ENCCLIENT: Checking if we are valid to continue: %s\n", buffer);
+
+	if (strcmp(buffer, "NOT VERIFIED") == 0) 
+		return 0;
+		//fprintf(stderr, "ENCCLIENT: ERROR: Invalid server.\n");
+		//exit(2);
+	
+
+	return 1;
 }
 
 
@@ -198,6 +202,9 @@ int getStringFromFile(char *filePath, char *outputStr) {
 		nread = getline(&currLine, &len, istr); 
 		strcpy(outputStr, currLine);
 		outputStr[strlen(outputStr) - 1] = '\0'; //Removes newline; MAYBE BUGGED WITH DIF INPUT?
+		
+		free(currLine);
+		fclose(istr);
 		return 1;
 	} else {
 		//perror("ERROR: File path '%s' is invalid\n", filePath);
