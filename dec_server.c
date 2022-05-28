@@ -1,6 +1,8 @@
 //Outline taken directly from lecture
 #define IPADDR "127.0.0.1" // Localhost 
-#define BUFSIZE 1024
+#define BUFSIZE 150000
+//#define BUFSIZE 1024
+#define S_BUFSIZE 256
 //#define PORT 56124
 
 #include <stdio.h>
@@ -29,9 +31,11 @@
 
 
 int main(int argc, char **argv) {
+	char idstring[S_BUFSIZE] = "DECSERVER";
+
 	//cmd line args
 	if (argc != 2){
-		fprintf(stderr, "DECSERVER: ERROR: Incorrect number of parameters\n");
+		fprintf(stderr, "%s: ERROR: Incorrect number of parameters\n", idstring);
 		return -1;
 	}
 	int port = atoi(argv[1]); //Grab port # from cmdline
@@ -44,8 +48,7 @@ int main(int argc, char **argv) {
 	//char *hello = "ENCSERVER: Hello[Server]\n";
 	//char *input = malloc(sizeof(char) * BUFSIZE);
 	char *input;
-	char *plaintext;
-	//char *ciphertext;
+	char *ciphertext;
 	char buffer[BUFSIZE] = {0};
 	int status;
 
@@ -63,13 +66,13 @@ int main(int argc, char **argv) {
 
 	//Make a socket for the server itself for read/write
 	if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-		perror("DECSERVER: Error: Socket creation error\n");
+		fprintf(stderr, "%s: Error: Socket creation error\n", idstring);
 		return -1;
 	}
 
 	//Attach the server socket to the given port
 	if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
-		perror("DECSERVER: setsocketopt error\n");
+		fprintf(stderr, "%s: setsocketopt error\n", idstring);
 		return -1;
 	}
 	
@@ -79,13 +82,13 @@ int main(int argc, char **argv) {
 
 	//Bind socket to given port
 	if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
-		perror("DECSERVER: ERROR: bind failed\n");
+		fprintf(stderr, "%s: ERROR: bind failed\n", idstring);
 		return -1;
 	}
 
 	//Listen out for connections; We need 5 at most
 	if (listen(server_fd, 5) < 0) {
-		perror("DECSERVER: ERROR: listen failed\n");
+		fprintf(stderr, "%s: ERROR: listen failed\n", idstring);
 		return -1;
 	}
 
@@ -120,10 +123,11 @@ int main(int argc, char **argv) {
 
 
 
+		fprintf(stdout, "Stuck on accepting sockets?\n");
 
 		//if ((new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&sizeof(address))) < 0) {
 		if ((new_socket = accept(server_fd, (struct sockaddr*)&address, &sizeOfClientIP)) < 0) {
-			perror("DECSERVER: ERROR: accepting client failed");
+			fprintf(stderr, "%s: ERROR: accepting client failed\n", idstring);
 			//return -1;
 			continue;
 		}
@@ -133,41 +137,13 @@ int main(int argc, char **argv) {
 		
 		//Error fork case
 		if (pid < 0) {
-			perror("DECSERVER: ERROR: forking failed");
+			fprintf(stderr, "%s: ERROR: forking failed\n", idstring);
 			exit(1);
 		}
 		//Child fork case; Here is where connection is handled
 		if (pid == 0) {
-			
-			/*	
-			//First, receive a message
-			valread = recv(new_socket, buffer, BUFSIZE, 0);
-			//printf("ENCSERVER: Message Received: %s\n", buffer);
-
-			//Now, verify the connection if the message is appropriate
-			if (strcmp(buffer, "ENCCLIENT") == 0){
-				//printf("ENCSERVER: YOU ARE VERIFIED\n");
-				memset(buffer, '\0', BUFSIZE);
-				strcpy(buffer, "VERIFIED");
-				send(new_socket, buffer, strlen(buffer), 0);
-			} else {
-
-				//printf("ENCSERVER: YOU ARE NOT VERIFIED\n");
-				memset(buffer, '\0', sizeof(buffer));
-				strcpy(buffer, "NOT VERIFIED");
-				send(new_socket, buffer, strlen(buffer), 0);
-
-				//You must also terminate the connection here as well;
-				//Increment semaphore now that it's closed
-				shutdown(new_socket, SHUT_RDWR);
-				sem_post(semOpenClients);
-				continue;
-			}
-			*/	
-			
-
+		fprintf(stdout, "Stuck on verifying sockets?\n");
 			//If verification fails, shut down the socket
-			
 			if (verifyClient(new_socket, valread) == 0) {
 				shutdown(new_socket, SHUT_RDWR);
 				sem_post(semOpenClients);
@@ -175,24 +151,92 @@ int main(int argc, char **argv) {
 			}
 			
 		
+
+
+			
+			//First, receive the number of packets
+			char temp[S_BUFSIZE] = {0};
+			valread = recv(new_socket, temp, S_BUFSIZE, 0);
+			char *end;
+			int packets = (int) strtol(temp, &end, 10);
+			//int packets = itoa(temp);
+			fprintf(stdout, "DECSERVER: Received as packet count: %d.\n", packets);
+
+			//Send confirmation message to send text back
+			memset(temp, '\0', S_BUFSIZE);
+			strcpy(temp, "go");
+			send(new_socket, temp, S_BUFSIZE, 0);
 			
 
-			//Perform decryption with the newly received key and plaintext
+			//Now, receive the aforementioned number of packets
 			memset(buffer, '\0', sizeof(buffer));
-			valread = recv(new_socket, buffer, BUFSIZE, 0);
-			input = malloc(sizeof(char) * BUFSIZE);
-			strcpy(input, buffer);
-			plaintext = decryptText(input);
+			for (int i = 0; i < packets; i++) {
+				memset(temp, '\0', S_BUFSIZE);
+				valread = recv(new_socket, temp, S_BUFSIZE, 0);
+				//fprintf(stdout, "%s: JUST READ: %s\n", idstring,  temp);
+				strcat(buffer, temp);
+				printf("DECSERVER: Read packet #: %d\n", i+1);
+			}
+
+			printf("Total Buffer: %s\n", buffer);
+
+
+
+			//Perform decryption with the newly received key and plaintext
+			//memset(buffer, '\0', sizeof(buffer));
+			//valread = recv(new_socket, buffer, BUFSIZE, 0);
+			//input = malloc(sizeof(char) * BUFSIZE);
+			//strcpy(input, buffer);
+			ciphertext = decryptText(buffer);
 
 			//printf("ENCSERVER: Outputted Ciphetext: %s\n", ciphertext);
+			
+
+
+			//Now, repeat on the server side
+			packets = 0;
+			packets = strlen(ciphertext) / S_BUFSIZE;
+			if (strlen(ciphertext) - (packets * S_BUFSIZE) > 0) packets +=1;
+			//fprintf(stdout, "ENCSERVER: Num of packets to send over: %d\n", packets);
+
+			memset(temp, '\0', S_BUFSIZE);
+			sprintf(temp, "%d\n", packets);
+			send(new_socket, temp, S_BUFSIZE, 0);
+			//send(sock, temp, S_BUFSIZE, 0);
+
+
+
+			memset(temp, '\0', S_BUFSIZE);
+			valread = recv(new_socket, temp, S_BUFSIZE, 0); //Wait for the confirmation message from the server
+			if (strcmp (temp, "go") != 0) {
+				fprintf(stderr, "%s: ERROR: Transmission failed.\n", idstring);
+				exit(1);
+			}
+			
+
+
+			//Finally, incrementally send out the plaintext
+
+			for (int i = 0; i < packets; i++) {
+				memset(temp, '\0', S_BUFSIZE);
+				strncpy(temp, ciphertext, S_BUFSIZE);	
+				memmove(ciphertext, ciphertext+S_BUFSIZE, BUFSIZE - S_BUFSIZE); //Careful with this precision
+				//memmove(input, input+S_BUFSIZE, BUFSIZE); //Careful with this precision
+				send(new_socket, temp, S_BUFSIZE, 0);
+			}
+
+
+
+
+
 
 			//send(new_socket, hello, strlen(hello), 0);
-			send(new_socket, plaintext, strlen(plaintext), 0);
+			//send(new_socket, ciphertext, strlen(ciphertext), 0);
 			//printf("ENCSERVER: Message sent\n");
 
 
 			//AFTER EVERYTHING, CLEAR BUFFER AND FREE CIPHERTEXT/INPUT
-			free(plaintext);
+			free(ciphertext);
 			free(input);
 
 			sem_post(semOpenClients);
@@ -222,25 +266,25 @@ int main(int argc, char **argv) {
 //	If not, then don't; Returns 0
 int verifyClient(int new_socket, int valread) {
 	//char buffer[BUFSIZE] = {0};
-	char newbuffer[BUFSIZE] = {0};
+	char newbuffer[S_BUFSIZE] = {0};
 	
 	//First, receive a message
-	valread = recv(new_socket, newbuffer, BUFSIZE, 0);
+	valread = recv(new_socket, newbuffer, S_BUFSIZE, 0);
 	//printf("ENCSERVER: Message Received: %s\n", buffer);
 
 	//Now, verify the connection if the message is appropriate
 	if (strcmp(newbuffer, "DECCLIENT") == 0){
 		//printf("ENCSERVER: YOU ARE VERIFIED\n");
-		memset(newbuffer, '\0', BUFSIZE);
+		memset(newbuffer, '\0', S_BUFSIZE);
 		strcpy(newbuffer, "VERIFIED");
-		send(new_socket, newbuffer, BUFSIZE, 0);
+		send(new_socket, newbuffer, S_BUFSIZE, 0);
 
 		return 1;
 	} else {
 		//printf("ENCSERVER: YOU ARE NOT VERIFIED\n");
-		memset(newbuffer, '\0', BUFSIZE);
+		memset(newbuffer, '\0', S_BUFSIZE);
 		strcpy(newbuffer, "NOT VERIFIED");
-		send(new_socket, newbuffer, BUFSIZE, 0);
+		send(new_socket, newbuffer, S_BUFSIZE, 0);
 		//You must also terminate the connection here as well;
 
 		return 0;
@@ -251,7 +295,6 @@ int verifyClient(int new_socket, int valread) {
 	}
 		
 }
-
 
 
 //This actually does the decryption
@@ -277,10 +320,10 @@ char* decryptText(char *input) {
 		//Set spaces to be 'A + 27'
 		if (ciphertext[i] == ' ') 
 			ciphertext[i] = ('A' + 26);
-		
+
 		if (key[i] == ' ') 
 			key[i] = ('A' + 26);
-		
+
 		//printf("CHAR: %c\n", plaintext[i]);
 
 		ctInt = ciphertext[i] - 'A';
@@ -298,5 +341,6 @@ char* decryptText(char *input) {
 		plaintext[i] = ptInt;
 
 	}
+	printf("Successfuly decryptyed: %s\n", plaintext);
 	return plaintext;
 }

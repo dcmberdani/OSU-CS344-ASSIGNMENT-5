@@ -2,7 +2,7 @@
 #define DEC_SERVER
 
 
-//Decrypts text
+//Encrypts text
 char* decryptText(char *input);
 
 //Reads into a small buffer and checks for the correct

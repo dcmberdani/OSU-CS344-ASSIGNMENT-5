@@ -334,6 +334,8 @@ char* encryptText(char *input) {
 		if (ctInt == (26 + 'A'))
 			ctInt = 32;
 		ciphertext[i] = ctInt;
+
+		fprintf(stdout, "ENCSERVER; On iteration: %d\n", i);
 	}
 
 	return ciphertext;

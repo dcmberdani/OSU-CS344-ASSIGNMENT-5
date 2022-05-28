@@ -14,7 +14,7 @@ int initialErrorCheck(char *plaintext, char *key, char **argv);
 int checkValidInput(char *input);
 
 //Checks if the server is the correct 
-int checkValidServer(int sock, int valread, char *buffer);
+int checkValidServer(int sock, int valread);
 
 
 #endif
