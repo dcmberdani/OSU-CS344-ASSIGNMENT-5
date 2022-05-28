@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
 	//	Instead, we have a programmer-defined error state and thus want a custom error message 
 	if (argc != 4){
 		//perror("ERROR: Incorrect number of parameters\n");
-		fprintf(stderr, "ERROR: Incorrect number of parameters\n");
+		fprintf(stderr, "ENCCLIENT: ERROR: Incorrect number of parameters\n");
 		//perror("ERROR: Incorrect number of parameters");
 		//return -1;
 		exit(1);
@@ -44,13 +44,13 @@ int main(int argc, char **argv) {
 	//If either file is invalid, then exit the program
 	//	Error messages printed in function
 	if (getStringFromFile(plaintext_file, plaintext) == 0){
-		perror("ERROR: File path for the plaintext is invalid");
+		perror("ENCCLIENT: ERROR: File path for the plaintext is invalid");
 		exit(1);
 		//return -1;
 	}
 
 	if (getStringFromFile(key_file, key) == 0) {
-		perror("ERROR: File path for the key is invalid");
+		perror("ENCCLIENT: ERROR: File path for the key is invalid");
 		exit(1);
 		//return -1;
 	}
@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
 	if (strlen(plaintext) > strlen(key)) {
 		//printf("ERROR: key in '%s' is too short \n", key_file);
 		//perror("ERROR: Key is too short");
-		fprintf(stderr, "ERROR: Key is too short\n");
+		fprintf(stderr, "ENCCLIENT: ERROR: Key is too short\n");
 		exit(1);
 		//return -1;
 	}
@@ -67,14 +67,14 @@ int main(int argc, char **argv) {
 	//Now, check if the characters in the strings are actually valid
 	if (checkValidInput(plaintext) == 0) {
 		//perror("ERROR: Invalid characters found in the plaintext file");
-		fprintf(stderr, "ERROR: Invalid characters found in the plaintext file\n");
+		fprintf(stderr, "ENCCLIENT: ERROR: Invalid characters found in the plaintext file\n");
 		exit(1);
 		//return -1;
 	}
 
 	if (checkValidInput(key) == 0) {
 		//perror("ERROR: Invalid characters found in the key file");
-		fprintf(stderr, "ERROR: Invalid characters found in the key file\n");
+		fprintf(stderr, "ENCCLIENT: ERROR: Invalid characters found in the key file\n");
 		exit(1);
 		//return -1;
 	}
@@ -87,13 +87,13 @@ int main(int argc, char **argv) {
 	//With preliminary stuff done, now the connection to the server can be done
 	int sock = 0, valread;
 	struct sockaddr_in serv_addr;
-	//char msg[BUFSIZE] = {0};
+	char msg[BUFSIZE] = {0}; // JUST FOR TESTING
 	char idMsg[BUFSIZE] = {0};
 	char buffer[BUFSIZE] = {0};
 
 	//Make a socket
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		perror("ENCCLIENT: Error: Socket creation error");
+		perror("ENCCLIENT: ERROR: Socket creation error");
 		exit(1);
 		//return -1;
 	}
@@ -104,14 +104,14 @@ int main(int argc, char **argv) {
 	//Convert IP address to usable binary
 	//if (inet_pton(AF_INET, "localhost", &serv_addr.sin_addr) <= 0) {
 	if (inet_pton(AF_INET, IPADDR, &serv_addr.sin_addr) <= 0) {
-		perror("ENCCLIENT: Error: Invalid address, address not supported");
+		perror("ENCCLIENT: ERROR: Invalid address, address not supported");
 		exit(1);
 		//return -1;
 	}
 
 	//Actually connect to the server
 	if (connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
-		perror("ENCCLIENT: Connection Failed");
+		perror("ENCCLIENT: ERROR: Connection Failed");
 		exit(1);
 		//return -1;
 	}
@@ -123,17 +123,18 @@ int main(int argc, char **argv) {
 	strcpy(idMsg, "ENCCLIENT");
 	//strcpy(idMsg, "BADENCCLIENT");
 	send(sock, idMsg, strlen(idMsg), 0);
-	printf("ENCCLIENT: ID STRING sent\n");
+	//printf("ENCCLIENT: ID STRING sent\n");
 
 	//Before reading back from server, clear buffer
 	memset(buffer, '\0', sizeof(buffer));
 	valread = recv(sock, buffer, BUFSIZE, 0); //0 specifies no flags
 
-	printf("Checking if we are valid to continue: %s\n", buffer);
+	//printf("ENCCLIENT: Checking if we are valid to continue: %s\n", buffer);
 
 	if (strcmp(buffer, "NOT VERIFIED") == 0) {
-		fprintf(stderr, "ERROR: Invalid server.\n");
-		exit(1);
+		fprintf(stderr, "ENCCLIENT: ERROR: Invalid server.\n");
+		//exit(1);
+		exit(2);
 	}
 
 
@@ -141,22 +142,23 @@ int main(int argc, char **argv) {
 	memset(buffer, '\0', sizeof(buffer));
 	sprintf(buffer, "%s|%s", plaintext, key);
 	send(sock, buffer, strlen(buffer), 0);
-	printf("ENCCLIENT: Message sent\n");
+	//printf("ENCCLIENT: Message sent\n");
 
 
 	//Now read in ciphertext
 	//Before reading back from server, clear buffer
 	memset(buffer, '\0', sizeof(buffer));
 	valread = recv(sock, buffer, BUFSIZE, 0); //0 specifies no flags
-	printf("ENCCLIENT: Message received: %s\n", buffer);
+	//printf("ENCCLIENT: Message received: %s\n", buffer);
+	printf("%s\n", buffer); //Prints out ciphertext
+
+	
 
 
 
 
 
-
-
-
+	/*
 
 	//TEST: Time to decrypt
 	char *decInput = malloc(sizeof(char) * BUFSIZE);
@@ -165,13 +167,17 @@ int main(int argc, char **argv) {
 	sprintf(decInput, "%s|%s", buffer, key);
 	//printf("DECINPUT: %s", decInput);
 	char *decOut = decryptText(decInput);
-	printf("DECOUT (SHOULD BE PLAINTEXT): %s\n", decOut);
+	//printf("ENCCLIENT: DECOUT (SHOULD BE PLAINTEXT): %s\n", decOut);
+	free(decInput);
 	
 
 	
 	free(plaintext);
 	free(key);
+	*/
 
+	//Exit 0 upon good execution
+	exit(0);
 	return 0;
 }
 
@@ -224,7 +230,7 @@ char* decryptText(char *input) {
 
 	strcpy(ciphertext, strtok_r(input, "|", &input));
 	strcpy(key, strtok_r(input, "|", &input));
-	printf("\nCT: %s\n\tK: %s\n", ciphertext, key);
+	//printf("\nCT: %s\n\tK: %s\n", ciphertext, key);
 
 	//DECRYPTION OPERATION
 	//	Same but in reverse, essentially
@@ -256,9 +262,5 @@ char* decryptText(char *input) {
 		plaintext[i] = ptInt;
 
 	}
-
-	int test = (-5 % 26);
-	printf("Just for a test: %d\n", test);
-
 	return plaintext;
 }

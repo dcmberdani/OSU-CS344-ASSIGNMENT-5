@@ -18,6 +18,12 @@
 
 #include <stdlib.h> //atoi()
 
+#include <semaphore.h> //obv
+#include <fcntl.h> // O_CREAT
+#include <sys/stat.h> // Mode constants
+#include <unistd.h> //fork()
+#include <sys/wait.h> //waitpid
+
 #include "enc_server.h"
 
 
@@ -25,11 +31,11 @@
 int main(int argc, char **argv) {
 	//cmd line args
 	if (argc != 2){
-		printf("ERROR: Incorrect number of parameters\n");
+		fprintf(stderr, "ENCSERVER: ERROR: Incorrect number of parameters\n");
 		return -1;
 	}
 	int PORT = atoi(argv[1]); //Grab port # from cmdline
-	printf("Starting server on port: %d\n", PORT);
+	//printf("ENCSERVER: Starting server on port: %d\n", PORT);
 	
 	int server_fd, new_socket, valread;
 	struct sockaddr_in address;
@@ -40,6 +46,7 @@ int main(int argc, char **argv) {
 	char *input;
 	char *ciphertext;
 	char buffer[BUFSIZE] = {0};
+	int status;
 
 	//From exploration "Communication VIA Sockets"
 	socklen_t sizeOfClientIP = sizeof(IPADDR); //All addresses are on localhost
@@ -62,67 +69,106 @@ int main(int argc, char **argv) {
 
 	//Bind socket to given port
 	if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
-		perror("ENCSERVER: bind failed\n");
+		perror("ENCSERVER: ERROR: bind failed\n");
 		return -1;
 	}
 
 	//Listen out for connections; We need 5 at most
 	if (listen(server_fd, 5) < 0) {
-		perror("ENCSERVER: listen failed\n");
+		perror("ENCSERVER: ERROR: listen failed\n");
 		return -1;
 	}
 
+	//int clientCount = 0;
+	//https://stackoverflow.com/questions/8359322/how-to-share-semaphores-between-processes-using-shared-memory
+	sem_t *semOpenClients = sem_open("semOpenClients", O_CREAT, 0644, 5); //Public semaphore of value 5; Don't fork unless one is open
+	sem_post(semOpenClients);
+	sem_post(semOpenClients);
+	sem_post(semOpenClients);
+	sem_post(semOpenClients);
+	sem_post(semOpenClients);
+	pid_t pid;
 	//Create new sockets whenever a server is accepted
 	while (1) {
 		memset(buffer, '\0', sizeof(buffer));
+
+		//First, fork the server if there are less than 5 total connections
+
+		int stat;
+		sem_getvalue(semOpenClients, &stat);
+		sem_wait(semOpenClients);
+
+
+
+
 		//if ((new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&sizeof(address))) < 0) {
 		if ((new_socket = accept(server_fd, (struct sockaddr*)&address, &sizeOfClientIP)) < 0) {
-			perror("ENCSERVER: accepting client failed");
+			perror("ENCSERVER: ERROR: accepting client failed");
 			//return -1;
 			continue;
 		}
 	
 
-	
-		//First, receive a message
-		valread = recv(new_socket, buffer, BUFSIZE, 0);
-		printf("ENCSERVER: Message Received: %s\n", buffer);
-
-		//Now, verify the connection if the message is appropriate
-		if (strcmp(buffer, "ENCCLIENT") == 0){
-			printf("TEMP MESSAGE: YOU ARE VERIFIED\n");
-			memset(buffer, '\0', sizeof(buffer));
-			strcpy(buffer, "VERIFIED");
-			send(new_socket, buffer, strlen(buffer), 0);
-		} else {
-
-			printf("TEMP MESSAGE: YOU ARE NOT VERIFIED\n");
-			memset(buffer, '\0', sizeof(buffer));
-			strcpy(buffer, "NOT VERIFIED");
-			send(new_socket, buffer, strlen(buffer), 0);
-			//You must also terminate the connection here as well;
-			shutdown(new_socket, SHUT_RDWR);
-			continue;
-		}
+		pid = fork();
 		
+		//Error fork case
+		if (pid < 0) {
+			perror("ENCSERVER: ERROR: forking failed");
+			exit(1);
+		}
+		//Child fork case; Here is where connection is handled
+		if (pid == 0) {
+			//First, receive a message
+			valread = recv(new_socket, buffer, BUFSIZE, 0);
+			//printf("ENCSERVER: Message Received: %s\n", buffer);
 
-		//Perform decryption with the newly received key and plaintext
-		memset(buffer, '\0', sizeof(buffer));
-		valread = recv(new_socket, buffer, BUFSIZE, 0);
-		input = malloc(sizeof(char) * BUFSIZE);
-		strcpy(input, buffer);
-		ciphertext = encryptText(input);
+			//Now, verify the connection if the message is appropriate
+			if (strcmp(buffer, "ENCCLIENT") == 0){
+				//printf("ENCSERVER: YOU ARE VERIFIED\n");
+				memset(buffer, '\0', sizeof(buffer));
+				strcpy(buffer, "VERIFIED");
+				send(new_socket, buffer, strlen(buffer), 0);
+			} else {
 
-		printf("Outputted Ciphetext: %s\n", ciphertext);
+				//printf("ENCSERVER: YOU ARE NOT VERIFIED\n");
+				memset(buffer, '\0', sizeof(buffer));
+				strcpy(buffer, "NOT VERIFIED");
+				send(new_socket, buffer, strlen(buffer), 0);
+				//You must also terminate the connection here as well;
+				shutdown(new_socket, SHUT_RDWR);
+				//Increment semaphore now that it's closed
+				sem_post(semOpenClients);
+				continue;
+			}
+			
 
-		//send(new_socket, hello, strlen(hello), 0);
-		send(new_socket, ciphertext, strlen(ciphertext), 0);
-		printf("ENCSERVER: Message sent\n");
+			//Perform decryption with the newly received key and plaintext
+			memset(buffer, '\0', sizeof(buffer));
+			valread = recv(new_socket, buffer, BUFSIZE, 0);
+			input = malloc(sizeof(char) * BUFSIZE);
+			strcpy(input, buffer);
+			ciphertext = encryptText(input);
+
+			//printf("ENCSERVER: Outputted Ciphetext: %s\n", ciphertext);
+
+			//send(new_socket, hello, strlen(hello), 0);
+			send(new_socket, ciphertext, strlen(ciphertext), 0);
+			//printf("ENCSERVER: Message sent\n");
 
 
-		//AFTER EVERYTHING, CLEAR BUFFER AND FREE CIPHERTEXT/INPUT
-		free(ciphertext);
-		free(input);
+			//AFTER EVERYTHING, CLEAR BUFFER AND FREE CIPHERTEXT/INPUT
+			free(ciphertext);
+			free(input);
+
+			sem_post(semOpenClients);
+		}
+		//Parent process; Basically waiting for children to finish;
+		//	I believe this is an infinite loop, waits for children to end;
+		//	Source: https://github.com/solomreb/cs344-prog4/blob/master/otp_enc_d.c
+		while (pid > 0) {
+			pid = waitpid(-1, &status, WNOHANG); //Waitpid -1 means wait for ANY child process
+		}
+
 
 		//EXPERIMENTAL; close server if message "CLOSE" is sent
 		if (strstr(buffer, "CLOSE") != NULL)
@@ -151,7 +197,7 @@ char* encryptText(char *input) {
 	//Now, separate the string into "plaintext" and "key"; They're separated by a '|'
 	strcpy(plaintext, strtok_r(input, "|", &input));
 	strcpy(key, strtok_r(input, "|", &input));
-	printf("\nPT: %s\n\tK: %s\n", plaintext, key);
+	//printf("\nPT: %s\n\tK: %s\n", plaintext, key);
 
 	//Now, perform the encryption operation
 	//	To do so, ierate through the plaintext string;
