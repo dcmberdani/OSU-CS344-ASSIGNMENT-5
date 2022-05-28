@@ -219,25 +219,25 @@ int main(int argc, char **argv) {
 //	If not, then don't; Returns 0
 int verifyClient(int new_socket, int valread) {
 	//char buffer[BUFSIZE] = {0};
-	char newbuffer[BUFSIZE] = {0};
+	char newbuffer[S_BUFSIZE] = {0};
 	
 	//First, receive a message
-	valread = recv(new_socket, newbuffer, BUFSIZE, 0);
+	valread = recv(new_socket, newbuffer, S_BUFSIZE, 0);
 	//printf("ENCSERVER: Message Received: %s\n", buffer);
 
 	//Now, verify the connection if the message is appropriate
 	if (strcmp(newbuffer, "ENCCLIENT") == 0){
 		//printf("ENCSERVER: YOU ARE VERIFIED\n");
-		memset(newbuffer, '\0', BUFSIZE);
+		memset(newbuffer, '\0', S_BUFSIZE);
 		strcpy(newbuffer, "VERIFIED");
-		send(new_socket, newbuffer, BUFSIZE, 0);
+		send(new_socket, newbuffer, S_BUFSIZE, 0);
 
 		return 1;
 	} else {
 		//printf("ENCSERVER: YOU ARE NOT VERIFIED\n");
-		memset(newbuffer, '\0', BUFSIZE);
+		memset(newbuffer, '\0', S_BUFSIZE);
 		strcpy(newbuffer, "NOT VERIFIED");
-		send(new_socket, newbuffer, BUFSIZE, 0);
+		send(new_socket, newbuffer, S_BUFSIZE, 0);
 		//You must also terminate the connection here as well;
 
 		return 0;

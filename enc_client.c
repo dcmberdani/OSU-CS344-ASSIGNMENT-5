@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
 
 
 	//Check if valid server, then perform communication
-	if (checkValidServer(sock, valread, buffer) == 0) {
+	if (checkValidServer(sock, valread) == 0) {
 		fprintf(stderr, "ENCCLIENT: ERROR: Invalid server.\n");
 		exit(2);
 	}
@@ -193,24 +193,25 @@ int initialErrorCheck(char *plaintext, char *key, char **argv) {
 
 }
 
-int checkValidServer(int sock, int valread, char *buffer) {
+int checkValidServer(int sock, int valread) {
 	//Request Encryption; 
 	//We'll send everything to the server all concatenated at once into the buffer
 	//	I think is is good bc it puts the onus locally instead of 50 write calls
 	//scanf("%s", msg);
-	memset(buffer, '\0', BUFSIZE);
-	strcpy(buffer, "ENCCLIENT");
+	char temp [S_BUFSIZE];
+	memset(temp, '\0', S_BUFSIZE);
+	strcpy(temp, "ENCCLIENT");
 	//strcpy(buffer, "BADENCCLIENT");
-	send(sock, buffer, BUFSIZE, 0);
+	send(sock, temp, S_BUFSIZE, 0);
 	//printf("ENCCLIENT: ID STRING sent\n");
 
 	//Before reading back from server, clear buffer
-	memset(buffer, '\0', BUFSIZE);
-	valread = recv(sock, buffer, BUFSIZE, 0); //0 specifies no flags
+	memset(temp, '\0', S_BUFSIZE);
+	valread = recv(sock, temp, S_BUFSIZE, 0); //0 specifies no flags
 
 	//printf("ENCCLIENT: Checking if we are valid to continue: %s\n", buffer);
 
-	if (strcmp(buffer, "NOT VERIFIED") == 0) 
+	if (strcmp(temp, "NOT VERIFIED") == 0) 
 		return 0;
 		//fprintf(stderr, "ENCCLIENT: ERROR: Invalid server.\n");
 		//exit(2);
