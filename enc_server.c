@@ -175,13 +175,20 @@ int main(int argc, char **argv) {
 				strcat(buffer, temp);
 			}
 
+			input = malloc(sizeof(char) * BUFSIZE);
+			strcpy(input, buffer);
+
+			char* temp15 = input;
+			input = cleanTransmittedInput(input);
+			free(temp15);
+
 
 
 			//Perform decryption with the newly received key and plaintext
 			//memset(buffer, '\0', sizeof(buffer));
 			//valread = recv(new_socket, buffer, BUFSIZE, 0);
-			input = malloc(sizeof(char) * BUFSIZE);
-			strcpy(input, buffer);
+			//input = malloc(sizeof(char) * BUFSIZE);
+			//strcpy(input, buffer);
 			ciphertext = encryptText(input);
 
 			//printf("ENCSERVER: Outputted Ciphetext: %s\n", ciphertext);
@@ -254,6 +261,22 @@ int main(int argc, char **argv) {
 	//testprint();
 
 	return 0;
+}
+
+char* cleanTransmittedInput(char *buffer) {
+	char *newbuf = malloc(sizeof(char) * BUFSIZE);
+	memset(newbuf, '\0', BUFSIZE);
+	char *token;
+	char *saveptr;
+	//while (token = strtok_r(buffer, "", &buffer)){ //Removes all ^B chars from the input
+	while (token = strtok_r(buffer, "", &buffer)) { //Removes all ^B chars from the input
+		strcat(newbuf, token);
+	}
+	//fprintf(stdout, "Cleaned text:\n%s\n\n\n\n\n\n", newbuf);
+	//	fflush(stdout);
+	//free(buffer);
+	return newbuf;
+
 }
 
 //Reads into a small buffer and checks for the correct
@@ -334,8 +357,6 @@ char* encryptText(char *input) {
 		if (ctInt == (26 + 'A'))
 			ctInt = 32;
 		ciphertext[i] = ctInt;
-
-		fprintf(stdout, "ENCSERVER; On iteration: %d\n", i);
 	}
 
 	return ciphertext;

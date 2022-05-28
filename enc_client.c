@@ -160,13 +160,17 @@ int main(int argc, char **argv) {
 
 	//Finally, incrementally read in the ciphertext
 	//Now, receive the aforementioned number of packets
-	memset(buffer, '\0', sizeof(buffer));
+	memset(buffer, '\0', BUFSIZE);
 	for (int i = 0; i < packets; i++) {
 		memset(temp, '\0', S_BUFSIZE);
 		valread = recv(sock, temp, S_BUFSIZE, 0);
 		//printf("ENCSERVER: JUST READ: %s\n", temp);
 		strcat(buffer, temp);
 	}
+	
+	char* temp15 = buffer;
+	buffer = cleanTransmittedInput(buffer);
+	free(temp15);
 
 
 
@@ -193,6 +197,24 @@ int main(int argc, char **argv) {
 	exit(0);
 	//return 0;
 }
+
+char* cleanTransmittedInput(char *buffer) {
+	char *newbuf = malloc(sizeof(char) * BUFSIZE);
+	memset(newbuf, '\0', BUFSIZE);
+	char *token;
+	char *saveptr;
+	//while (token = strtok_r(buffer, "", &buffer)){ //Removes all ^B chars from the input
+	while (token = strtok_r(buffer, "", &buffer)) { //Removes all ^B chars from the input
+		strcat(newbuf, token);
+	}
+	//fprintf(stdout, "Cleaned text:\n%s\n\n\n\n\n\n", newbuf);
+	//	fflush(stdout);
+	//free(buffer);
+	return newbuf;
+
+}
+
+
 
 
 //Returns 1 on success, 0 on fail

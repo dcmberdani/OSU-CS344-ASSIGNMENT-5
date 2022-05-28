@@ -17,4 +17,6 @@ int checkValidInput(char *input);
 int checkValidServer(int sock, int valread);
 
 
+char* cleanTransmittedInput(char *buffer);
+
 #endif

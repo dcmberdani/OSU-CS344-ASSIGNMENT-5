@@ -123,7 +123,6 @@ int main(int argc, char **argv) {
 
 
 
-		fprintf(stdout, "Stuck on accepting sockets?\n");
 
 		//if ((new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&sizeof(address))) < 0) {
 		if ((new_socket = accept(server_fd, (struct sockaddr*)&address, &sizeOfClientIP)) < 0) {
@@ -142,7 +141,6 @@ int main(int argc, char **argv) {
 		}
 		//Child fork case; Here is where connection is handled
 		if (pid == 0) {
-		fprintf(stdout, "Stuck on verifying sockets?\n");
 			//If verification fails, shut down the socket
 			if (verifyClient(new_socket, valread) == 0) {
 				shutdown(new_socket, SHUT_RDWR);
@@ -160,7 +158,7 @@ int main(int argc, char **argv) {
 			char *end;
 			int packets = (int) strtol(temp, &end, 10);
 			//int packets = itoa(temp);
-			fprintf(stdout, "DECSERVER: Received as packet count: %d.\n", packets);
+			//fprintf(stdout, "DECSERVER: Received as packet count: %d.\n", packets);
 
 			//Send confirmation message to send text back
 			memset(temp, '\0', S_BUFSIZE);
@@ -175,10 +173,10 @@ int main(int argc, char **argv) {
 				valread = recv(new_socket, temp, S_BUFSIZE, 0);
 				//fprintf(stdout, "%s: JUST READ: %s\n", idstring,  temp);
 				strcat(buffer, temp);
-				printf("DECSERVER: Read packet #: %d\n", i+1);
+				//printf("DECSERVER: Read packet #: %d\n", i+1);
 			}
 
-			printf("Total Buffer: %s\n", buffer);
+			//printf("Total Buffer: %s\n", buffer);
 
 
 
@@ -189,7 +187,7 @@ int main(int argc, char **argv) {
 			//strcpy(input, buffer);
 			ciphertext = decryptText(buffer);
 
-			//printf("ENCSERVER: Outputted Ciphetext: %s\n", ciphertext);
+			fprintf(stdout, "DECSERVER: Outputted Ciphetext: %s\n\n\n\n\n\n\n\n\n", ciphertext);
 			
 
 
@@ -341,6 +339,5 @@ char* decryptText(char *input) {
 		plaintext[i] = ptInt;
 
 	}
-	printf("Successfuly decryptyed: %s\n", plaintext);
 	return plaintext;
 }

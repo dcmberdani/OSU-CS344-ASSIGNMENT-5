@@ -111,6 +111,9 @@ int main(int argc, char **argv) {
 	printf("Num packets sent over the file if packet size 50: %d\n", strlen(buffer) / 50 + 1);
 	*/
 
+
+	printf("Sending over plaintext: %s\n\n\n\n\n\n\n\n\n\n", plaintext);
+
 	//First, send the number of packets
 	int packets = 0;
 	char temp[S_BUFSIZE] = {0};
@@ -164,7 +167,6 @@ int main(int argc, char **argv) {
 	for (int i = 0; i < packets; i++) {
 		memset(temp, '\0', S_BUFSIZE);
 		valread = recv(sock, temp, S_BUFSIZE, 0);
-		//printf("ENCSERVER: JUST READ: %s\n", temp);
 		strcat(buffer, temp);
 	}
 
@@ -181,7 +183,7 @@ int main(int argc, char **argv) {
 
 
 
-	printf("%s\n", buffer); //Prints out ciphertext
+	//printf("%s\n", buffer); //Prints out ciphertext
 
 
 	//Free memory before exiting
