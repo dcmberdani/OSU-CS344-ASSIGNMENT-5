@@ -27,4 +27,7 @@ EXECUTING/CLEANUP:
 		They should be run in the background to allow for the clients to actually connect
 		They can't close on their own, so use signals to terminate them when finished testing
 
+	A script is provided to execute the program as well. To use it, type:
+		'bash ./p5testscript [randport1] [randport2]'
+
 	In order to remove the executable/object files from the directory, type 'make clean'
