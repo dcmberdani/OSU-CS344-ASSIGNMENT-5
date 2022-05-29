@@ -15,9 +15,15 @@ COMPILING:
 		'dec_server'
 
 EXECUTING/CLEANUP:
-	The clients are executed by typing './[exe] ./[plain/ciphertext] ./key [port #]'
+	Keygen is executed by typing:
+		'./keygen [keylength]'
+		
+	The clients are executed by typing:
+       		'./[exe] ./[plain/ciphertext] ./key [port #]'
 		The correct server must be running on the given port for the client to connect
-	The servers are executed by typing './[exe] [port #] &'
+
+	The servers are executed by typing:
+       		'./[exe] [port #] &'
 		They should be run in the background to allow for the clients to actually connect
 		They can't close on their own, so use signals to terminate them when finished testing
 
