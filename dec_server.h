@@ -10,4 +10,7 @@ char* decryptText(char *input);
 //	If not, then don't; Returns 0
 int verifyClient(int new_socket, int valread);
 
+//Removes the '^B's everywhere
+char* cleanTransmittedInput(char *buffer);
+
 #endif

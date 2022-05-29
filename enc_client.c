@@ -185,7 +185,7 @@ int main(int argc, char **argv) {
 
 
 
-	printf("%s\n", buffer); //Prints out ciphertext
+	printf("%s\n", buffer); ///Prints out ciphertext
 
 
 	//Free memory before exiting

@@ -158,7 +158,7 @@ int main(int argc, char **argv) {
 			char *end;
 			int packets = (int) strtol(temp, &end, 10);
 			//int packets = itoa(temp);
-			//fprintf(stdout, "DECSERVER: Received as packet count: %d.\n", packets);
+			//fprintf(stdout, "ENCSERVER: Received as packet count: %d.\n", packets);
 
 			//Send confirmation message to send text back
 			memset(temp, '\0', S_BUFSIZE);
@@ -171,12 +171,16 @@ int main(int argc, char **argv) {
 			for (int i = 0; i < packets; i++) {
 				memset(temp, '\0', S_BUFSIZE);
 				valread = recv(new_socket, temp, S_BUFSIZE, 0);
-				//fprintf(stdout, "%s: JUST READ: %s\n", idstring,  temp);
+				//printf("ENCSERVER: JUST READ: %s\n", temp);
 				strcat(buffer, temp);
-				//printf("DECSERVER: Read packet #: %d\n", i+1);
 			}
 
-			//printf("Total Buffer: %s\n", buffer);
+			input = malloc(sizeof(char) * BUFSIZE);
+			strcpy(input, buffer);
+
+			char* temp15 = input;
+			input = cleanTransmittedInput(input);
+			free(temp15);
 
 
 
@@ -185,9 +189,9 @@ int main(int argc, char **argv) {
 			//valread = recv(new_socket, buffer, BUFSIZE, 0);
 			//input = malloc(sizeof(char) * BUFSIZE);
 			//strcpy(input, buffer);
-			ciphertext = decryptText(buffer);
+			ciphertext = decryptText(input);
 
-			fprintf(stdout, "DECSERVER: Outputted Ciphetext: %s\n\n\n\n\n\n\n\n\n", ciphertext);
+			//printf("ENCSERVER: Outputted Ciphetext: %s\n", ciphertext);
 			
 
 
@@ -259,6 +263,22 @@ int main(int argc, char **argv) {
 	return 0;
 }
 
+char* cleanTransmittedInput(char *buffer) {
+	char *newbuf = malloc(sizeof(char) * BUFSIZE);
+	memset(newbuf, '\0', BUFSIZE);
+	char *token;
+	char *saveptr;
+	//while (token = strtok_r(buffer, "", &buffer)){ //Removes all ^B chars from the input
+	while (token = strtok_r(buffer, "", &buffer)) { //Removes all ^B chars from the input
+		strcat(newbuf, token);
+	}
+	//fprintf(stdout, "Cleaned text:\n%s\n\n\n\n\n\n", newbuf);
+	//	fflush(stdout);
+	//free(buffer);
+	return newbuf;
+
+}
+
 //Reads into a small buffer and checks for the correct
 //	If it's good, continue; Returns 1
 //	If not, then don't; Returns 0
@@ -294,8 +314,7 @@ int verifyClient(int new_socket, int valread) {
 		
 }
 
-
-//This actually does the decryption
+//This actually does the encryption
 char* decryptText(char *input) {
 
 	char *token;

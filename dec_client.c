@@ -20,7 +20,7 @@
 
 #include <stdlib.h> //atoi()
 
-#include "dec_client.h"
+#include "enc_client.h"
 
 int main(int argc, char **argv) {
 	//String used for all error messaging;
@@ -111,9 +111,6 @@ int main(int argc, char **argv) {
 	printf("Num packets sent over the file if packet size 50: %d\n", strlen(buffer) / 50 + 1);
 	*/
 
-
-	printf("Sending over plaintext: %s\n\n\n\n\n\n\n\n\n\n", plaintext);
-
 	//First, send the number of packets
 	int packets = 0;
 	char temp[S_BUFSIZE] = {0};
@@ -137,10 +134,11 @@ int main(int argc, char **argv) {
 	for (int i = 0; i < packets; i++) {
 		memset(temp, '\0', S_BUFSIZE);
 		strncpy(temp, buffer, S_BUFSIZE);	
+		//memmove(buffer, buffer+S_BUFSIZE, BUFSIZE); //Careful with this precision
 		memmove(buffer, buffer+S_BUFSIZE, BUFSIZE - S_BUFSIZE); //Careful with this precision
 		send(sock, temp, S_BUFSIZE, 0);
-		//printf("DECCLIENT: Sent packet with: %s", temp);
 	}
+
 
 
 
@@ -163,12 +161,17 @@ int main(int argc, char **argv) {
 
 	//Finally, incrementally read in the ciphertext
 	//Now, receive the aforementioned number of packets
-	memset(buffer, '\0', sizeof(buffer));
+	memset(buffer, '\0', BUFSIZE);
 	for (int i = 0; i < packets; i++) {
 		memset(temp, '\0', S_BUFSIZE);
 		valread = recv(sock, temp, S_BUFSIZE, 0);
+		//printf("ENCSERVER: JUST READ: %s\n", temp);
 		strcat(buffer, temp);
 	}
+	
+	char* temp15 = buffer;
+	buffer = cleanTransmittedInput(buffer);
+	free(temp15);
 
 
 
@@ -181,9 +184,15 @@ int main(int argc, char **argv) {
 	//printf("ENCCLIENT: Message received: %s\n", buffer);
 	*/
 
+	
+	//Clean up input one more time before printing
+	if (temp15 = strstr(buffer, "|"))
+		*temp15 = '\0';
 
 
-	//printf("%s\n", buffer); //Prints out ciphertext
+	//printf("\n\n\n\n\n\n\n\n\n\n\n\n\n%s\n\n\n\n\n\n\n\n\n\n\n", buffer); //Prints out ciphertext
+	//printf("%.70000s\n", buffer); //Prints out ciphertext
+	printf("%s\n", buffer); //Prints out ciphertext
 
 
 	//Free memory before exiting
@@ -195,6 +204,24 @@ int main(int argc, char **argv) {
 	exit(0);
 	//return 0;
 }
+
+char* cleanTransmittedInput(char *buffer) {
+	char *newbuf = malloc(sizeof(char) * BUFSIZE);
+	memset(newbuf, '\0', BUFSIZE);
+	char *token;
+	char *saveptr;
+	//while (token = strtok_r(buffer, "", &buffer)){ //Removes all ^B chars from the input
+	while (token = strtok_r(buffer, "", &buffer)) { //Removes all ^B chars from the input
+		strcat(newbuf, token);
+	}
+	//fprintf(stdout, "Cleaned text:\n%s\n\n\n\n\n\n", newbuf);
+	//	fflush(stdout);
+	//free(buffer);
+	return newbuf;
+
+}
+
+
 
 
 //Returns 1 on success, 0 on fail
@@ -297,13 +324,9 @@ int getStringFromFile(char *filePath, char *outputStr) {
 //Returns 1 if input is valid, 0 if it isn't
 int checkValidInput(char *input) {
 	//Run through the string; If anything is NOT a capital letter or ' ', return 0
-	for (int i = 0; i < strlen(input); i++) {
-		if (input[i] == 2)
-			memmove(input + i - 1, input + i, BUFSIZE - i +1);
-			//input[i] = ' ';
+	for (int i = 0; i < strlen(input); i++) 
 		if ( (input[i] < 'A' || input[i] > 'Z') && input[i] != ' ')
 			return 0;
-	}
 
 	return 1;
 }
