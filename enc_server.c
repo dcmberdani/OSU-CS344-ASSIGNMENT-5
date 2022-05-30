@@ -1,9 +1,7 @@
 //Outline taken directly from lecture
 #define IPADDR "127.0.0.1" // Localhost 
 #define BUFSIZE 150000
-//#define BUFSIZE 1024
 #define S_BUFSIZE 256
-//#define PORT 56124
 
 #include <stdio.h>
 
@@ -15,11 +13,9 @@
 #include <netdb.h>
 #include <arpa/inet.h> //inet_pton
 
-//String stuff
+//Other misc. functionality
 #include <string.h>
-
 #include <stdlib.h> //atoi()
-
 #include <semaphore.h> //obv
 #include <fcntl.h> // O_CREAT
 #include <sys/stat.h> // Mode constants
@@ -31,6 +27,7 @@
 
 
 int main(int argc, char **argv) {
+	//ID string, same as in enc_client
 	char idstring[S_BUFSIZE] = "ENCSERVER";
 
 	//cmd line args
@@ -39,27 +36,20 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 	int port = atoi(argv[1]); //Grab port # from cmdline
-	//printf("ENCSERVER: Starting server on port: %d\n", PORT);
-	
 	int server_fd, new_socket, valread;
 	struct sockaddr_in address;
 	int opt = 1;
 	int addrlen = sizeof(address);
-	//char *hello = "ENCSERVER: Hello[Server]\n";
-	//char *input = malloc(sizeof(char) * BUFSIZE);
 	char *input;
 	char *ciphertext;
 	char buffer[BUFSIZE] = {0};
 	int status;
 
 
-
-
-
-
-
-
-
+	/*
+	 * This initial block of code is just setting up the initial server sockets
+	 * 	As in the enc_client, essentially all of this was taken from the networking lecture
+	 */
 
 	//From exploration "Communication VIA Sockets"
 	socklen_t sizeOfClientIP = sizeof(IPADDR); //All addresses are on localhost
@@ -93,17 +83,11 @@ int main(int argc, char **argv) {
 	}
 
 
-
-
-
-
-
-
-
-	//int clientCount = 0;
 	//https://stackoverflow.com/questions/8359322/how-to-share-semaphores-between-processes-using-shared-memory
+	//	Basically this is a semaphore that ensures only 5 processes can be used at once
 	sem_t *semOpenClients = sem_open("semOpenClients", O_CREAT, 0644, 5); //Public semaphore of value 5; Don't fork unless one is open
 	//Temp fix as the semaphore seems to not want to actually work w/a default value
+	//	I never found out how to fix this in the actual final version, so I guess this scuffed method is all I have
 	sem_post(semOpenClients);
 	sem_post(semOpenClients);
 	sem_post(semOpenClients);
@@ -112,19 +96,17 @@ int main(int argc, char **argv) {
 
 	pid_t pid;
 	//Create new sockets whenever a server is accepted
+	//	My fork protocol was inspired by the source linked below
+	//	https://github.com/solomreb/cs344-prog4/blob/master/otp_enc_d.c
 	while (1) {
 		memset(buffer, '\0', sizeof(buffer));
 
 		//First, fork the server if there are less than 5 total connections
-
 		int stat;
 		sem_getvalue(semOpenClients, &stat);
 		sem_wait(semOpenClients);
 
 
-
-
-		//if ((new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&sizeof(address))) < 0) {
 		if ((new_socket = accept(server_fd, (struct sockaddr*)&address, &sizeOfClientIP)) < 0) {
 			fprintf(stderr, "%s: ERROR: accepting client failed\n", idstring);
 			//return -1;
@@ -149,16 +131,19 @@ int main(int argc, char **argv) {
 			}
 			
 		
-
-
-			
-			//First, receive the number of packets
+			/*
+			 * This block of code is used to read in packets sent by the client
+			 * First, the client will send the number of packets used to contain the plaintext/ciphetext
+			 * 	The server will receive this number and store it
+			 * Then, the server sends a confirmation message ensuring that the number of packets received is correct
+			 * Finally, the client will start sending packets one by one, which the server will receive
+			 * Basically, it's a handshake to exchange a packet count, then actually sending packets
+			 * When fully received, the server then cleans the input and encrypts it
+			 */
 			char temp[S_BUFSIZE] = {0};
 			valread = recv(new_socket, temp, S_BUFSIZE, 0);
 			char *end;
 			int packets = (int) strtol(temp, &end, 10);
-			//int packets = itoa(temp);
-			//fprintf(stdout, "ENCSERVER: Received as packet count: %d.\n", packets);
 
 			//Send confirmation message to send text back
 			memset(temp, '\0', S_BUFSIZE);
@@ -171,7 +156,6 @@ int main(int argc, char **argv) {
 			for (int i = 0; i < packets; i++) {
 				memset(temp, '\0', S_BUFSIZE);
 				valread = recv(new_socket, temp, S_BUFSIZE, 0);
-				//printf("ENCSERVER: JUST READ: %s\n", temp);
 				strcat(buffer, temp);
 			}
 
@@ -183,29 +167,24 @@ int main(int argc, char **argv) {
 			free(temp15);
 
 
-
-			//Perform decryption with the newly received key and plaintext
-			//memset(buffer, '\0', sizeof(buffer));
-			//valread = recv(new_socket, buffer, BUFSIZE, 0);
-			//input = malloc(sizeof(char) * BUFSIZE);
-			//strcpy(input, buffer);
+			//Encrypt the ciphertext and store it
 			ciphertext = encryptText(input);
 
-			//printf("ENCSERVER: Outputted Ciphetext: %s\n", ciphertext);
-			
 
 
+			/*
+			 * This block of code now sends the ciphertext back to the client using the same protocol as above
+			 * This time, the roles are reversed, with the server sending and the client receiving
+			 * Since the code is basically identical I won't rehash it here
+			 */
 			//Now, repeat on the server side
 			packets = 0;
 			packets = strlen(ciphertext) / S_BUFSIZE;
 			if (strlen(ciphertext) - (packets * S_BUFSIZE) > 0) packets +=1;
-			//fprintf(stdout, "ENCSERVER: Num of packets to send over: %d\n", packets);
 
 			memset(temp, '\0', S_BUFSIZE);
 			sprintf(temp, "%d\n", packets);
 			send(new_socket, temp, S_BUFSIZE, 0);
-			//send(sock, temp, S_BUFSIZE, 0);
-
 
 
 			memset(temp, '\0', S_BUFSIZE);
@@ -215,26 +194,14 @@ int main(int argc, char **argv) {
 				exit(1);
 			}
 			
-
-
 			//Finally, incrementally send out the plaintext
 
 			for (int i = 0; i < packets; i++) {
 				memset(temp, '\0', S_BUFSIZE);
 				strncpy(temp, ciphertext, S_BUFSIZE);	
 				memmove(ciphertext, ciphertext+S_BUFSIZE, BUFSIZE - S_BUFSIZE); //Careful with this precision
-				//memmove(input, input+S_BUFSIZE, BUFSIZE); //Careful with this precision
 				send(new_socket, temp, S_BUFSIZE, 0);
 			}
-
-
-
-
-
-
-			//send(new_socket, hello, strlen(hello), 0);
-			//send(new_socket, ciphertext, strlen(ciphertext), 0);
-			//printf("ENCSERVER: Message sent\n");
 
 
 			//AFTER EVERYTHING, CLEAR BUFFER AND FREE CIPHERTEXT/INPUT
@@ -250,31 +217,22 @@ int main(int argc, char **argv) {
 			pid = waitpid(-1, &status, WNOHANG); //Waitpid -1 means wait for ANY child process
 		}
 
-
-		//EXPERIMENTAL; close server if message "CLOSE" is sent
-		if (strstr(buffer, "CLOSE") != NULL)
-			break;
 	}
 	
-	//Find some way to close the infinite loop? Maybe if the buffer is 0 it'll close
-
-	//testprint();
-
 	return 0;
 }
 
+
+//Check client for futher comments
 char* cleanTransmittedInput(char *buffer) {
 	char *newbuf = malloc(sizeof(char) * BUFSIZE);
 	memset(newbuf, '\0', BUFSIZE);
 	char *token;
 	char *saveptr;
-	//while (token = strtok_r(buffer, "", &buffer)){ //Removes all ^B chars from the input
 	while (token = strtok_r(buffer, "", &buffer)) { //Removes all ^B chars from the input
 		strcat(newbuf, token);
 	}
-	//fprintf(stdout, "Cleaned text:\n%s\n\n\n\n\n\n", newbuf);
-	//	fflush(stdout);
-	//free(buffer);
+
 	return newbuf;
 
 }
@@ -283,33 +241,25 @@ char* cleanTransmittedInput(char *buffer) {
 //	If it's good, continue; Returns 1
 //	If not, then don't; Returns 0
 int verifyClient(int new_socket, int valread) {
-	//char buffer[BUFSIZE] = {0};
 	char newbuffer[S_BUFSIZE] = {0};
 	
 	//First, receive a message
 	valread = recv(new_socket, newbuffer, S_BUFSIZE, 0);
-	//printf("ENCSERVER: Message Received: %s\n", buffer);
 
 	//Now, verify the connection if the message is appropriate
 	if (strcmp(newbuffer, "ENCCLIENT") == 0){
-		//printf("ENCSERVER: YOU ARE VERIFIED\n");
 		memset(newbuffer, '\0', S_BUFSIZE);
 		strcpy(newbuffer, "VERIFIED");
 		send(new_socket, newbuffer, S_BUFSIZE, 0);
 
 		return 1;
 	} else {
-		//printf("ENCSERVER: YOU ARE NOT VERIFIED\n");
 		memset(newbuffer, '\0', S_BUFSIZE);
 		strcpy(newbuffer, "NOT VERIFIED");
 		send(new_socket, newbuffer, S_BUFSIZE, 0);
 		//You must also terminate the connection here as well;
 
 		return 0;
-		//Increment semaphore now that it's closed
-		//shutdown(new_socket, SHUT_RDWR);
-		//sem_post(semOpenClients);
-		//continue;
 	}
 		
 }
@@ -324,12 +274,10 @@ char* encryptText(char *input) {
 	char *ciphertext = malloc(sizeof(char) * BUFSIZE);
 	memset(ciphertext, '\0', BUFSIZE); //Make sure the output buffer for ciphertext is clear
 	int keyInt, ptInt, ctInt;
-	//strcpy(ciphertext, "TEST");
 
 	//Now, separate the string into "plaintext" and "key"; They're separated by a '|'
 	strcpy(plaintext, strtok_r(input, "|", &input));
 	strcpy(key, strtok_r(input, "|", &input));
-	//printf("\nPT: %s\n\tK: %s\n", plaintext, key);
 
 	//Now, perform the encryption operation
 	//	To do so, ierate through the plaintext string;
@@ -348,12 +296,9 @@ char* encryptText(char *input) {
 		if (key[i] == ' ') 
 			key[i] = ('A' + 26);
 		
-		//printf("CHAR: %c\n", plaintext[i]);
-
 		ptInt = plaintext[i] - 'A';
 		keyInt = key[i] - 'A';
 		ctInt = ((ptInt + keyInt) % 27) + 'A'; //This is the encrypted char
-		//if (ctInt == (27 + 'A'))
 		if (ctInt == (26 + 'A'))
 			ctInt = 32;
 		ciphertext[i] = ctInt;
@@ -363,4 +308,3 @@ char* encryptText(char *input) {
 
 	
 }
-
